@@ -231,15 +231,33 @@
    <div class="bg-ring"></div>
   </div>
   <div id="app" class="w-full h-full overflow-auto">
-   <!-- Header -->
-   <header class="sticky top-0 z-40 w-full border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-md">
-    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between"><!-- Logo --> <a href="#" class="flex items-center gap-3 hover:opacity-90 transition"> <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-sm font-bold text-slate-950 shadow-lg shadow-emerald-500/20">VLP</span>
-      <div class="flex flex-col leading-tight"><span class="font-semibold tracking-tight text-white text-sm">Virtual Launch Pro</span> <span class="text-xs text-slate-400">Job Match &amp; Intro Service</span>
-      </div></a> <!-- Nav Menu -->
-     <nav class="hidden md:flex items-center gap-8"><a href="#features" class="text-sm font-medium text-slate-300 hover:text-emerald-400 transition">Features</a> <a href="#how-it-works" class="text-sm font-medium text-slate-300 hover:text-emerald-400 transition">How It Works</a> <button id="support-header-link" class="text-sm font-medium text-slate-300 hover:text-emerald-400 transition bg-none border-none p-0 cursor-pointer">Support</button>
-     </nav><!-- CTA Button --> <button class="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-semibold text-sm rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg shadow-emerald-500/25 active:scale-95" onclick="window.open('/form', '_blank')">Get Started</button>
-    </div>
-   </header>
+    
+    <!-- Header -->
+    <header class="sticky top-0 z-40 w-full border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-md">
+      <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <!-- Logo -->
+        <a href="/index.html" class="flex items-center gap-3 hover:opacity-90 transition">
+          <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-sm font-bold text-slate-950 shadow-lg shadow-emerald-500/20">VLP</span>
+          <div class="flex flex-col leading-tight">
+            <span class="font-semibold tracking-tight text-white text-sm">Virtual Launch Pro</span>
+            <span class="text-xs text-slate-400">Job Match & Intro Service</span>
+          </div>
+        </a>
+        <!-- Nav Menu -->
+        <nav class="hidden md:flex items-center gap-8">
+          <a href="#features" class="text-sm font-medium text-slate-300 hover:text-emerald-400 transition">Features</a>
+          <a href="#how-it-works" class="text-sm font-medium text-slate-300 hover:text-emerald-400 transition">How It Works</a>
+          <a href="/support.html" class="text-sm font-medium text-slate-300 hover:text-emerald-400 transition">Support</a>
+        </nav>
+        <!-- CTA Button -->
+        <a href="/onboarding.html" target="_blank" rel="noopener">
+          <button class="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-semibold text-sm rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg shadow-emerald-500/25 active:scale-95">
+            Get Started
+          </button>
+        </a>
+      </div>
+    </header>
+    
    <main class="flex-1">
     <section class="px-6 pt-12 pb-12 md:pt-20 md:pb-20 overflow-hidden">
      <div class="max-w-7xl mx-auto grid gap-12 lg:grid-cols-[1.05fr_.95fr] items-center">
@@ -252,7 +270,12 @@
        <h1 id="hero-headline" class="future-headline text-4xl md:text-6xl lg:text-7xl mb-6 animate-fadeInUp" style="animation-delay: 0.1s;">Work with U.S. <span class="gradient-text">Clients</span></h1>
        <p id="hero-subheadline" class="text-xl md:text-2xl text-slate-400 mb-10 max-w-2xl lg:max-w-none leading-relaxed animate-fadeInUp" style="animation-delay: 0.2s;">Virtual Launch Pro connects talented developers with high-quality U.S. clients seeking specialized expertise. Set your own rates, choose your projects, scale on your terms.</p>
        <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start animate-fadeInUp" style="animation-delay: 0.3s;">
-        <button class="inline-block px-8 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-semibold text-lg rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 active:scale-95" onclick="window.open('/form', '_blank')"> Get Started Now → </button> <a href="#how-it-works" class="inline-block px-8 py-4 border border-slate-700 hover:border-emerald-500/50 bg-slate-900/40 hover:bg-slate-800/60 text-slate-100 font-semibold text-lg rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-emerald-500/10"> How It Works </a>
+        <a href="/onboarding.html" target="_blank" rel="noopener">
+          <button class="inline-block px-8 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-semibold text-lg rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 active:scale-95">
+            Get Started
+          </button>
+        </a>
+        <a href="#how-it-works" class="inline-block px-8 py-4 border border-slate-700 hover:border-emerald-500/50 bg-slate-900/40 hover:bg-slate-800/60 text-slate-100 font-semibold text-lg rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-emerald-500/10"> How It Works </a>
        </div>
        <div class="grid sm:grid-cols-3 gap-4 mt-10 text-left">
         <div class="rounded-2xl border border-slate-800 bg-slate-900/45 p-4 animate-fadeInUp hover:border-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/10 transition-all duration-300" style="animation-delay: 0.4s;">

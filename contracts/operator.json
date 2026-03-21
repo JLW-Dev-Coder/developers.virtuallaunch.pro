@@ -1,0 +1,132 @@
+{
+  "auth": {
+    "required": true,
+    "trustClientIdentityFields": false,
+    "type": "session"
+  },
+  "contract": {
+    "authority": [
+      "R2_VIRTUAL_LAUNCH"
+    ],
+    "governs": "Operator dashboard access and management of form submissions, posts, developers, and analytics.",
+    "path": "app/contracts/dashboard/dashboard.contract.json",
+    "source": "Virtual Launch Pro",
+    "title": "Virtual Launch Pro — Dashboard Contract",
+    "usedOnPages": [
+      "/dashboard.html"
+    ],
+    "validation": {
+      "enumStrict": true,
+      "normalizeCheckboxToBoolean": true,
+      "rejectUnknownValues": true,
+      "requireJsonContentType": true
+    },
+    "version": 1
+  },
+  "delivery": {
+    "endpoint": "/forms/dashboard",
+    "method": "POST",
+    "receiptKeyPattern": "receipts/{source}/{eventId}.json",
+    "receiptSource": "dashboard",
+    "signature": {
+      "header": null,
+      "required": false,
+      "secretEnvVar": null
+    }
+  },
+  "effects": {
+    "dedupeKey": "payload.eventId",
+    "eventIdFrom": "payload.eventId",
+    "receiptAppend": {
+      "to": "receipts/{source}/{eventId}.json"
+    },
+    "canonicalPatch": {
+      "createdAt": "{system.nowIso}",
+      "eventId": "{payload.eventId}",
+      "recordId": "{payload.eventId}",
+      "status": "submitted",
+      "updatedAt": "{system.nowIso}"
+    },
+    "canonicalUpsert": {
+      "patchFrom": "effects.canonicalPatch",
+      "target": "dashboard-records/{recordId}.json"
+    },
+    "writeOrder": [
+      "receiptAppend",
+      "canonicalUpsert"
+    ],
+    "writes": [
+      "dashboard-records"
+    ]
+  },
+  "payload": {
+    "additionalProperties": false,
+    "properties": {
+      "eventId": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "developerRef": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "developerName": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "posterName": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "postContent": {
+        "minLength": 1,
+        "maxLength": 5000,
+        "type": "string"
+      },
+      "postUrl": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "status": {
+        "enum": ["complete", "pending", "upcoming"],
+        "type": "string"
+      },
+      "createdAt": {
+        "format": "date-time",
+        "type": "string"
+      },
+      "nextNotificationDue": {
+        "format": "date-time",
+        "type": "string"
+      }
+    },
+    "required": [
+      "eventId",
+      "developerRef",
+      "developerName",
+      "status",
+      "createdAt"
+    ],
+    "type": "object"
+  },
+  "response": {
+    "deduped": {
+      "deduped": true,
+      "eventId": "{effects.eventIdFrom}",
+      "ok": true
+    },
+    "error": {
+      "error": "validation_failed",
+      "ok": false
+    },
+    "success": {
+      "eventId": "{effects.eventIdFrom}",
+      "ok": true,
+      "status": "submitted"
+    }
+  },
+  "schema": {
+    "name": "vlp_dashboard_flow",
+    "version": 1
+  }
+}

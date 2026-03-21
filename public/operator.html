@@ -1,0 +1,825 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Virtual Launch Pro - Dashboard</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="/_sdk/data_sdk.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+  <link rel="icon" href="https://virtuallaunch.pro/favicon.ico" sizes="any">
+  <link rel="icon" href="https://virtuallaunch.pro/assets/favicon.ico" sizes="any">
+  <link rel="icon" type="image/svg+xml" href="https://virtuallaunch.pro/assets/favicon.svg">
+  <link rel="apple-touch-icon" href="https://virtuallaunch.pro/assets/favicon.ico">
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    * {
+      font-family: 'Sora', sans-serif;
+      box-sizing: border-box;
+    }
+
+    body {
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Canva background effects */
+    .site-bg-effects {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #app, #app > *, main, header, footer {
+      position: relative;
+      z-index: 1;
+    }
+
+    .bg-blob {
+      position: absolute;
+      border-radius: 9999px;
+      filter: blur(90px);
+      will-change: transform;
+    }
+
+    .bg-blob-1 {
+      width: 36rem;
+      height: 36rem;
+      top: -10rem;
+      left: -12rem;
+      opacity: 0.18;
+      background: radial-gradient(circle, rgba(16,185,129,0.24) 0%, rgba(16,185,129,0) 70%);
+      animation: blobEdgeOne 32s cubic-bezier(0.45,0.05,0.55,0.95) infinite alternate;
+    }
+
+    .bg-blob-2 {
+      width: 42rem;
+      height: 42rem;
+      top: 24rem;
+      right: -14rem;
+      opacity: 0.14;
+      background: radial-gradient(circle, rgba(59,130,246,0.16) 0%, rgba(59,130,246,0) 72%);
+      animation: blobEdgeTwo 36s cubic-bezier(0.45,0.05,0.55,0.95) infinite alternate;
+    }
+
+    .bg-blob-3 {
+      width: 30rem;
+      height: 30rem;
+      bottom: -8rem;
+      left: 24%;
+      opacity: 0.12;
+      background: radial-gradient(circle, rgba(148,163,184,0.14) 0%, rgba(148,163,184,0) 72%);
+      animation: blobEdgeThree 34s cubic-bezier(0.45,0.05,0.55,0.95) infinite alternate;
+    }
+
+    @keyframes blobEdgeOne {
+      0% { transform: translate3d(0,0,0) scale(1); opacity:0.14; }
+      25% { transform: translate3d(3rem,2rem,0) scale(1.04); opacity:0.18; }
+      50% { transform: translate3d(7rem,4rem,0) scale(1.08); opacity:0.22; }
+      75% { transform: translate3d(4rem,7rem,0) scale(1.03); opacity:0.17; }
+      100% { transform: translate3d(9rem,5rem,0) scale(1.1); opacity:0.2; }
+    }
+
+    @keyframes blobEdgeTwo {
+      0% { transform: translate3d(0,0,0) scale(1); opacity:0.11; }
+      25% { transform: translate3d(-3rem,-2rem,0) scale(1.03); opacity:0.14; }
+      50% { transform: translate3d(-7rem,-4rem,0) scale(1.07); opacity:0.18; }
+      75% { transform: translate3d(-5rem,1rem,0) scale(1.04); opacity:0.13; }
+      100% { transform: translate3d(-9rem,-3rem,0) scale(1.09); opacity:0.16; }
+    }
+
+    @keyframes blobEdgeThree {
+      0% { transform: translate3d(0,0,0) scale(1); opacity:0.1; }
+      25% { transform: translate3d(2rem,-2rem,0) scale(1.03); opacity:0.13; }
+      50% { transform: translate3d(5rem,-5rem,0) scale(1.06); opacity:0.16; }
+      75% { transform: translate3d(1rem,-3rem,0) scale(1.02); opacity:0.12; }
+      100% { transform: translate3d(6rem,-6rem,0) scale(1.08); opacity:0.15; }
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      width: 100%;
+    }
+
+    main {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .field-focus:focus {
+      outline: none;
+      border-color: #10b981;
+      box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
+    }
+
+    .fade-in {
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+ </head>
+ <body class="bg-slate-950 text-slate-100">
+  <div class="site-bg-effects" aria-hidden="true">
+   <div class="bg-blob bg-blob-1"></div>
+   <div class="bg-blob bg-blob-2"></div>
+   <div class="bg-blob bg-blob-3"></div>
+  </div>
+  <div id="app"><!-- Auth Screen -->
+   <div id="auth-screen" class="flex-1 flex items-center justify-center px-6 py-12">
+    <div class="w-full max-w-md">
+     <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 mb-4 shadow-lg shadow-emerald-500/25"><i data-lucide="shield" style="width:28px;height:28px;color:white;"></i>
+      </div>
+      <h1 class="text-3xl font-bold text-slate-100 tracking-tight">Operator Access</h1>
+      <p class="text-sm text-slate-400 mt-2">Virtual Launch Pro Dashboard</p>
+     </div>
+     <form id="auth-form" class="space-y-4 bg-slate-900/50 rounded-2xl border border-slate-700/50 p-8">
+      <div><label for="auth-email" class="block text-sm font-medium text-slate-300 mb-2">Email</label> <input type="email" id="auth-email" placeholder="operator@example.com" class="field-focus w-full border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-100 bg-slate-900 transition placeholder-slate-600" required>
+      </div>
+      <div><label for="auth-code" class="block text-sm font-medium text-slate-300 mb-2">Access Code</label> <input type="password" id="auth-code" placeholder="••••••••" class="field-focus w-full border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-100 bg-slate-900 transition placeholder-slate-600" required>
+      </div><button type="submit" class="w-full px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-semibold text-sm rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-lg shadow-emerald-500/25"> Sign In </button>
+      <div id="auth-error" class="hidden p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+       <p class="text-xs text-red-200">Invalid credentials. Please try again.</p>
+      </div>
+     </form>
+    </div>
+   </div>
+   <!-- Dashboard Screen -->
+   <div id="dashboard-screen" class="hidden flex flex-col h-full">
+    <!-- Header -->
+   <header class="sticky top-0 z-40 w-full border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+     <!-- Logo --> 
+      <a href="/index.html" class="flex items-center gap-3 hover:opacity-90 transition"> <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-sm font-bold text-slate-950 shadow-lg shadow-emerald-500/20">VLP</span>
+      <div class="flex flex-col leading-tight">
+       <span class="font-semibold tracking-tight text-white text-sm">Virtual Launch Pro</span> <span class="text-xs text-slate-400">Job Match &amp; Intro Service</span>
+      </div></a> 
+      <!-- Nav Menu -->
+     <nav class="hidden md:flex items-center gap-8">
+      <a href="/index.html#features" class="text-sm font-medium text-slate-300 hover:text-emerald-400 transition">Features</a> 
+      <a href="/index.html#how-it-works" class="text-sm font-medium text-slate-300 hover:text-emerald-400 transition">How It Works</a> 
+      <a href="/reviews.html" class="text-sm font-medium text-slate-300 hover:text-emerald-400 transition">Reviews</a>
+      <a href="/support.html" class="text-sm font-medium text-slate-300 hover:text-emerald-400 transition">Support</a>
+     </nav><!-- CTA Button --> 
+     <a href="/onboarding.html"> <button class="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-semibold text-sm rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg shadow-emerald-500/25 active:scale-95"> Get Started </button> </a>
+    </div>
+   </header>
+   
+   <!-- Main Content -->
+    <main class="flex-1 px-6 py-8 overflow-y-auto">
+     <div class="max-w-7xl mx-auto"><!-- Tabs -->
+      <div class="flex gap-4 mb-8 mt-16 border-b border-slate-800/50"><button class="dashboard-tab active px-4 py-3 text-sm font-medium border-b-2 border-emerald-500 text-emerald-400 transition" data-tab="analytics"> <i data-lucide="bar-chart-3" style="width:16px;height:16px;display:inline;margin-right:6px;vertical-align:middle;"></i> Analytics </button> <button class="dashboard-tab px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-300 transition" data-tab="submissions"> <i data-lucide="file-text" style="width:16px;height:16px;display:inline;margin-right:6px;vertical-align:middle;"></i> Form Submissions </button> <button class="dashboard-tab px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-300 transition" data-tab="posts"> <i data-lucide="share-2" style="width:16px;height:16px;display:inline;margin-right:6px;vertical-align:middle;"></i> Post Submissions </button> <button class="dashboard-tab px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-300 transition" data-tab="developers"> <i data-lucide="users" style="width:16px;height:16px;display:inline;margin-right:6px;vertical-align:middle;"></i> Developers </button>
+      </div><!-- Submissions Tab -->
+      <div id="submissions-tab" class="dashboard-tab-content hidden fade-in">
+       <div class="grid md:grid-cols-3 gap-4 mb-8">
+        <div class="rounded-xl border border-slate-700/50 bg-gradient-to-br from-blue-500/10 to-blue-600/5 p-6">
+         <div class="flex items-center justify-between">
+          <div>
+           <p class="text-xs text-slate-400 uppercase tracking-wide mb-2">Total Submissions</p>
+           <p class="text-3xl font-bold text-blue-400" id="total-submissions">0</p>
+          </div><i data-lucide="inbox" style="width:40px;height:40px;color:#3b82f6;opacity:0.3;"></i>
+         </div>
+        </div>
+        <div class="rounded-xl border border-slate-700/50 bg-gradient-to-br from-purple-500/10 to-purple-600/5 p-6">
+         <div class="flex items-center justify-between">
+          <div>
+           <p class="text-xs text-slate-400 uppercase tracking-wide mb-2">Total Posts</p>
+           <p class="text-3xl font-bold text-purple-400" id="total-posts">0</p>
+          </div><i data-lucide="share-2" style="width:40px;height:40px;color:#a855f7;opacity:0.3;"></i>
+         </div>
+        </div>
+        <div class="rounded-xl border border-slate-700/50 bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 p-6">
+         <div class="flex items-center justify-between">
+          <div>
+           <p class="text-xs text-slate-400 uppercase tracking-wide mb-2">Active Developers</p>
+           <p class="text-3xl font-bold text-cyan-400" id="active-developers">0</p>
+          </div><i data-lucide="users" style="width:40px;height:40px;color:#06b6d4;opacity:0.3;"></i>
+         </div>
+        </div>
+       </div>
+       <div class="rounded-xl border border-slate-700/50 bg-slate-900/30 overflow-hidden">
+        <div class="overflow-x-auto">
+         <table class="w-full text-sm">
+          <thead class="bg-slate-900/50 border-b border-slate-700/50">
+           <tr>
+            <th class="px-6 py-4 text-left font-semibold text-slate-300">Reference</th>
+            <th class="px-6 py-4 text-left font-semibold text-slate-300">Developer</th>
+            <th class="px-6 py-4 text-left font-semibold text-slate-300">Email</th>
+            <th class="px-6 py-4 text-left font-semibold text-slate-300">Posts</th>
+            <th class="px-6 py-4 text-left font-semibold text-slate-300">Status</th>
+            <th class="px-6 py-4 text-left font-semibold text-slate-300">Date</th>
+           </tr>
+          </thead>
+          <tbody id="submissions-table">
+           <tr>
+            <td colspan="6" class="px-6 py-12 text-center text-slate-400"><i data-lucide="inbox" style="width:40px;height:40px;margin:0 auto 12px;opacity:0.3;"></i> <p>No form submissions yet</p></td>
+           </tr>
+          </tbody>
+         </table>
+        </div>
+       </div>
+      </div><!-- Posts Tab -->
+      <div id="posts-tab" class="dashboard-tab-content hidden">
+       <div class="bg-slate-900/30 rounded-xl border border-slate-700/50 p-8 mb-8">
+        <h3 class="text-lg font-semibold text-slate-100 mb-6">Submit New Post</h3>
+        <form id="post-form" class="space-y-4">
+         <div class="grid md:grid-cols-2 gap-4">
+          <div><label for="post-dev-ref" class="block text-sm font-medium text-slate-300 mb-2">Developer Reference #</label> <input type="text" id="post-dev-ref" placeholder="DEV-001" class="field-focus w-full border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-100 bg-slate-900 transition placeholder-slate-600" required>
+          </div>
+          <div><label for="post-dev-name" class="block text-sm font-medium text-slate-300 mb-2">Developer Name (Auto-filled)</label> <input type="text" id="post-dev-name" placeholder="Will auto-populate" class="w-full border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-400 bg-slate-900 cursor-not-allowed" disabled>
+          </div>
+         </div>
+         <div><label for="post-poster-name" class="block text-sm font-medium text-slate-300 mb-2">Poster Name</label> <input type="text" id="post-poster-name" placeholder="John Doe" class="field-focus w-full border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-100 bg-slate-900 transition placeholder-slate-600" required>
+         </div>
+         <div><label for="post-url" class="block text-sm font-medium text-slate-300 mb-2">Post URL</label> <input type="url" id="post-url" placeholder="https://facebook.com/post/123456" class="field-focus w-full border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-100 bg-slate-900 transition placeholder-slate-600" required>
+         </div>
+         <div><label for="post-content" class="block text-sm font-medium text-slate-300 mb-2">Post Content</label> <textarea id="post-content" placeholder="Paste the post content here..." class="field-focus w-full border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-100 bg-slate-900 transition placeholder-slate-600 resize-none" style="min-height: 120px;" required></textarea>
+         </div><button type="submit" class="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-semibold text-sm rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-lg shadow-emerald-500/25"> <i data-lucide="send" style="width:16px;height:16px;display:inline;margin-right:6px;vertical-align:middle;"></i> Submit Post </button>
+        </form>
+        <div id="post-success" class="hidden mt-6 p-4 rounded-lg border border-emerald-500/30 bg-emerald-500/5">
+         <div class="flex items-center gap-3"><i data-lucide="check-circle" style="width:20px;height:20px;color:#10b981;"></i>
+          <p class="text-sm text-emerald-200">Post submitted and email sent to developer</p>
+         </div>
+        </div>
+       </div>
+       <div class="rounded-xl border border-slate-700/50 bg-slate-900/30 overflow-hidden">
+        <div class="overflow-x-auto">
+         <table class="w-full text-sm">
+          <thead class="bg-slate-900/50 border-b border-slate-700/50">
+           <tr>
+            <th class="px-6 py-4 text-left font-semibold text-slate-300">Developer</th>
+            <th class="px-6 py-4 text-left font-semibold text-slate-300">Poster</th>
+            <th class="px-6 py-4 text-left font-semibold text-slate-300">Post URL</th>
+            <th class="px-6 py-4 text-left font-semibold text-slate-300">Content Preview</th>
+            <th class="px-6 py-4 text-left font-semibold text-slate-300">Submitted</th>
+           </tr>
+          </thead>
+          <tbody id="posts-table">
+           <tr>
+            <td colspan="5" class="px-6 py-12 text-center text-slate-400"><i data-lucide="share-2" style="width:40px;height:40px;margin:0 auto 12px;opacity:0.3;"></i> <p>No posts submitted yet</p></td>
+           </tr>
+          </tbody>
+         </table>
+        </div>
+       </div>
+      </div><!-- Developers Tab -->
+      <div id="developers-tab" class="dashboard-tab-content hidden">
+       <div class="mb-8 flex gap-4 flex-col md:flex-row"><input type="text" id="dev-search" placeholder="Search by name or reference..." class="field-focus flex-1 border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-100 bg-slate-900 transition placeholder-slate-600">
+        <div class="relative"><select id="dev-filter-status" class="field-focus w-full md:w-56 border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-100 bg-slate-900 transition appearance-none cursor-pointer hover:border-slate-600 focus:border-emerald-500 pr-10"> <option value="">All Statuses</option> <option value="complete">✓ Complete</option> <option value="pending">⏱ Pending</option> <option value="upcoming">📅 Upcoming</option> </select>
+         <div class="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2"><i data-lucide="chevron-down" style="width:18px;height:18px;color:#94a3b8;"></i>
+         </div>
+        </div>
+       </div>
+       <div class="grid gap-4" id="developers-grid">
+        <div class="col-span-full text-center py-12"><i data-lucide="users" style="width:40px;height:40px;margin:0 auto 12px;opacity:0.3;"></i>
+         <p class="text-slate-400">No developers yet</p>
+        </div>
+       </div>
+      </div><!-- Analytics Tab -->
+      <div id="analytics-tab" class="dashboard-tab-content fade-in">
+       <!-- Key Metrics Cards -->
+       <div class="grid md:grid-cols-4 gap-4 mb-8">
+        <div class="rounded-xl border border-slate-700/50 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 p-6">
+         <div class="flex items-center justify-between">
+          <div>
+           <p class="text-xs text-slate-400 uppercase tracking-wide mb-2">Complete</p>
+           <p class="text-3xl font-bold text-emerald-400" id="analytics-complete">0</p>
+          </div><i data-lucide="check-circle" style="width:40px;height:40px;color:#10b981;opacity:0.3;"></i>
+         </div>
+        </div>
+        <div class="rounded-xl border border-slate-700/50 bg-gradient-to-br from-orange-500/10 to-orange-600/5 p-6">
+         <div class="flex items-center justify-between">
+          <div>
+           <p class="text-xs text-slate-400 uppercase tracking-wide mb-2">Pending</p>
+           <p class="text-3xl font-bold text-orange-400" id="analytics-pending">0</p>
+          </div><i data-lucide="clock" style="width:40px;height:40px;color:#f97316;opacity:0.3;"></i>
+         </div>
+        </div>
+        <div class="rounded-xl border border-slate-700/50 bg-gradient-to-br from-blue-500/10 to-blue-600/5 p-6">
+         <div class="flex items-center justify-between">
+          <div>
+           <p class="text-xs text-slate-400 uppercase tracking-wide mb-2">Upcoming</p>
+           <p class="text-3xl font-bold text-blue-400" id="analytics-upcoming">0</p>
+          </div><i data-lucide="calendar" style="width:40px;height:40px;color:#3b82f6;opacity:0.3;"></i>
+         </div>
+        </div>
+        <div class="rounded-xl border border-slate-700/50 bg-gradient-to-br from-purple-500/10 to-purple-600/5 p-6">
+         <div class="flex items-center justify-between">
+          <div>
+           <p class="text-xs text-slate-400 uppercase tracking-wide mb-2">Posts</p>
+           <p class="text-3xl font-bold text-purple-400" id="analytics-posts">0</p>
+          </div><i data-lucide="share-2" style="width:40px;height:40px;color:#a855f7;opacity:0.3;"></i>
+         </div>
+        </div>
+       </div><!-- Charts Row -->
+       <div class="grid md:grid-cols-2 gap-6 mb-8">
+        <!-- Status Distribution Chart -->
+        <div class="rounded-xl border border-slate-700/50 bg-slate-900/30 p-6">
+         <h3 class="text-lg font-semibold text-slate-100 mb-6">Status Distribution</h3>
+         <div class="space-y-6">
+          <div>
+           <div class="flex justify-between items-end mb-3">
+            <span class="text-sm text-slate-300 font-medium">Complete</span> <span class="text-sm font-semibold text-emerald-400" id="analytics-complete-pct">0%</span>
+           </div>
+           <div class="w-full bg-slate-800/50 rounded-full h-3 overflow-hidden">
+            <div class="bg-gradient-to-r from-emerald-500 to-emerald-400 h-3 rounded-full transition-all duration-500" id="analytics-complete-bar" style="width: 0%"></div>
+           </div>
+          </div>
+          <div>
+           <div class="flex justify-between items-end mb-3">
+            <span class="text-sm text-slate-300 font-medium">Pending</span> <span class="text-sm font-semibold text-orange-400" id="analytics-pending-pct">0%</span>
+           </div>
+           <div class="w-full bg-slate-800/50 rounded-full h-3 overflow-hidden">
+            <div class="bg-gradient-to-r from-orange-500 to-orange-400 h-3 rounded-full transition-all duration-500" id="analytics-pending-bar" style="width: 0%"></div>
+           </div>
+          </div>
+          <div>
+           <div class="flex justify-between items-end mb-3">
+            <span class="text-sm text-slate-300 font-medium">Upcoming</span> <span class="text-sm font-semibold text-blue-400" id="analytics-upcoming-pct">0%</span>
+           </div>
+           <div class="w-full bg-slate-800/50 rounded-full h-3 overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-500 to-blue-400 h-3 rounded-full transition-all duration-500" id="analytics-upcoming-bar" style="width: 0%"></div>
+           </div>
+          </div>
+         </div>
+        </div><!-- Activity Overview -->
+        <div class="rounded-xl border border-slate-700/50 bg-slate-900/30 p-6">
+         <h3 class="text-lg font-semibold text-slate-100 mb-6">Activity Overview</h3>
+         <div class="space-y-4">
+          <div class="flex items-center justify-between p-4 rounded-lg bg-slate-800/30 border border-slate-700/30 hover:border-emerald-500/30 transition">
+           <div class="flex items-center gap-3">
+            <i data-lucide="users" style="width:20px;height:20px;color:#3b82f6;"></i> <span class="text-sm text-slate-300">Developers Registered</span>
+           </div><span class="text-xl font-bold text-blue-400" id="analytics-devs">0</span>
+          </div>
+          <div class="flex items-center justify-between p-4 rounded-lg bg-slate-800/30 border border-slate-700/30 hover:border-purple-500/30 transition">
+           <div class="flex items-center gap-3">
+            <i data-lucide="share-2" style="width:20px;height:20px;color:#a855f7;"></i> <span class="text-sm text-slate-300">Posts Submitted</span>
+           </div><span class="text-xl font-bold text-purple-400" id="analytics-posts-activity">0</span>
+          </div>
+          <div class="flex items-center justify-between p-4 rounded-lg bg-slate-800/30 border border-slate-700/30 hover:border-violet-500/30 transition">
+           <div class="flex items-center gap-3">
+            <i data-lucide="trending-up" style="width:20px;height:20px;color:#8b5cf6;"></i> <span class="text-sm text-slate-300">Avg Posts per Developer</span>
+           </div><span class="text-xl font-bold text-violet-400" id="analytics-avg">0</span>
+          </div>
+         </div>
+        </div>
+       </div><!-- Developer Performance -->
+       <div class="rounded-xl border border-slate-700/50 bg-slate-900/30 p-6">
+        <h3 class="text-lg font-semibold text-slate-100 mb-6">Developer Performance</h3>
+        <div class="space-y-3 max-h-96 overflow-y-auto" id="analytics-dev-list">
+         <div class="text-center py-8">
+          <p class="text-slate-400">No data yet</p>
+         </div>
+        </div>
+       </div>
+      </div>
+     </div>
+    </main>
+   </div><!-- Client Portal Screen -->
+   <div id="client-screen" class="hidden flex flex-col h-full"><!-- Client Header -->
+    <header class="sticky top-0 z-40 w-full border-b border-slate-800/50 bg-slate-950/95 backdrop-blur-md">
+     <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+       <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-sm font-bold text-slate-950 shadow-lg shadow-emerald-500/20">
+        VLP
+       </div>
+       <div>
+        <h2 class="font-semibold text-slate-100 text-sm">Your Posts</h2>
+        <p class="text-xs text-slate-400">Virtual Launch Pro</p>
+       </div>
+      </div><button id="client-logout-btn" class="flex items-center gap-2 px-4 py-2 border border-slate-700 hover:border-red-500/50 text-slate-300 hover:text-red-400 text-sm rounded-lg transition-all"> <i data-lucide="log-out" style="width:16px;height:16px;"></i> Logout </button>
+     </div>
+    </header><!-- Client Main -->
+    <main class="flex-1 px-6 py-8 overflow-y-auto">
+     <div class="max-w-4xl mx-auto">
+      <div class="mb-8">
+       <h1 class="text-3xl font-bold text-slate-100 mb-2">Your Status: <span id="client-status-badge" class="status-badge status-pending">Pending</span></h1>
+       <p class="text-slate-400">Check back regularly for new opportunities in your area of expertise.</p>
+      </div>
+      <div id="client-posts-grid" class="grid md:grid-cols-2 gap-6">
+       <div class="col-span-full text-center py-12"><i data-lucide="inbox" style="width:40px;height:40px;margin:0 auto 12px;opacity:0.3;"></i>
+        <p class="text-slate-400">No posts available yet</p>
+       </div>
+      </div>
+     </div>
+    </main>
+   </div>
+  </div>
+  <!-- Footer -->
+   <footer class="border-t border-slate-800/50 bg-slate-950">
+    <div class="max-w-7xl mx-auto px-6 py-12">
+     <div class="grid md:grid-cols-4 gap-8 mb-12">
+      <div>
+       <a href="#" class="flex items-center gap-3 hover:opacity-90 transition mb-4">
+        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-sm font-bold text-slate-950">VLP</span>
+        <div class="flex flex-col leading-tight"><span class="font-semibold tracking-tight text-white text-sm">Virtual Launch Pro</span><span class="text-xs text-slate-400">Job Match &amp; Intro</span></div>
+       </a>
+       <p class="text-xs text-slate-500">Connecting talented developers with premium U.S. clients.</p>
+      </div>
+      <div>
+       <h3 class="font-semibold text-slate-100 mb-4 text-sm">Product</h3>
+       <ul class="space-y-2">
+        <li><a href="/index.html#features" class="text-xs text-slate-400 hover:text-emerald-400 transition">Features</a></li>
+        <li><a href="/index.html#how-it-works" class="text-xs text-slate-400 hover:text-emerald-400 transition">How It Works</a></li>
+        <li><a href="/support.html" class="text-xs text-slate-400 hover:text-emerald-400 transition">Support</a></li>
+       </ul>
+      </div>
+      <div>
+       <h3 class="font-semibold text-slate-100 mb-4 text-sm">Company</h3>
+       <ul class="space-y-2">
+        <li><a href="#features" class="text-xs text-slate-400 hover:text-emerald-400 transition">Features</a></li>
+        <li><a href="#how-it-works" class="text-xs text-slate-400 hover:text-emerald-400 transition">How It Works</a></li>
+        <li><a href="/reviews.html" class="text-xs text-slate-400 hover:text-emerald-400 transition">Reviews</a></li>
+        <li><a href="/support.html" id="support-footer-link" class="text-xs text-slate-400 hover:text-emerald-400 transition cursor-pointer bg-none border-none p-0">Support</a></li>
+       </ul>
+      </div>
+      <div>
+       <h3 class="font-semibold text-slate-100 mb-4 text-sm">Support</h3>
+       <ul class="space-y-2">
+        <li><a href="tel:+16198005457" class="text-xs text-slate-400 hover:text-emerald-400 transition">+1 (619) 800-5457</a></li>
+        <li><a href="https://t.me/virtuallaunchpro" target="_blank" rel="noopener noreferrer" class="text-xs text-slate-400 hover:text-emerald-400 transition">@virtuallaunchpro</a></li>
+       </ul>
+      </div>
+     </div>
+     <div class="border-t border-slate-800/50 pt-8 flex flex-col md:flex-row items-center justify-between">
+      <p class="text-xs text-slate-500">© 2024 Virtual Launch Pro. All rights reserved.</p>
+      <p class="text-xs text-slate-500 mt-4 md:mt-0">Helping developers launch their freelance careers with the right clients.</p>
+     </div>
+    </div>
+   </footer>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async function() {
+      // Element SDK init
+      window.elementSdk.init({
+        defaultConfig: {},
+        onConfigChange: async () => {},
+        mapToCapabilities: () => ({
+          recolorables: [],
+          borderables: [],
+          fontEditable: undefined,
+          fontSizeable: undefined
+        }),
+        mapToEditPanelValues: () => new Map([])
+      });
+
+      // Demo credentials
+      const VALID_EMAIL = 'operator@vlp.com';
+      const VALID_CODE = 'vlp2024';
+
+      let currentMode = 'auth'; // auth, dashboard, client
+      let isOperator = false;
+      let allRecords = [];
+
+      // Initialize Data SDK
+      await window.dataSdk.init({
+        onDataChanged(data) {
+          allRecords = data;
+          updateDashboard();
+        }
+      });
+
+      // Auth Form
+      const authForm = document.getElementById('auth-form');
+      const authError = document.getElementById('auth-error');
+
+      authForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('auth-email').value.trim();
+        const code = document.getElementById('auth-code').value.trim();
+
+        if (email === VALID_EMAIL && code === VALID_CODE) {
+          authError.classList.add('hidden');
+          isOperator = true;
+          switchMode('dashboard');
+        } else {
+          authError.classList.remove('hidden');
+        }
+      });
+
+      // Logout buttons
+      document.getElementById('logout-btn').addEventListener('click', () => {
+        isOperator = false;
+        switchMode('auth');
+        authForm.reset();
+      });
+
+      document.getElementById('client-logout-btn').addEventListener('click', () => {
+        switchMode('auth');
+        authForm.reset();
+      });
+
+      // Tab switching
+      document.querySelectorAll('.dashboard-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.dashboard-tab').forEach(t => {
+            t.classList.remove('active', 'border-emerald-500', 'text-emerald-400');
+            t.classList.add('border-transparent', 'text-slate-400');
+          });
+          document.querySelectorAll('.dashboard-tab-content').forEach(t => t.classList.add('hidden'));
+
+          tab.classList.add('active', 'border-emerald-500', 'text-emerald-400');
+          tab.classList.remove('border-transparent', 'text-slate-400');
+
+          const tabName = tab.dataset.tab;
+          document.getElementById(`${tabName}-tab`).classList.remove('hidden');
+          lucide.createIcons();
+        });
+      });
+
+      // Post Form
+      const postForm = document.getElementById('post-form');
+      const postDevRef = document.getElementById('post-dev-ref');
+      const postDevName = document.getElementById('post-dev-name');
+      const postSuccess = document.getElementById('post-success');
+
+      postDevRef.addEventListener('change', () => {
+        const ref = postDevRef.value.trim();
+        const dev = allRecords.find(r => r.developer_ref === ref);
+        if (dev) {
+          postDevName.value = dev.developer_name;
+        } else {
+          postDevName.value = '';
+        }
+      });
+
+      postForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const devRef = postDevRef.value.trim();
+        const devName = postDevName.value.trim();
+        const posterName = document.getElementById('post-poster-name').value.trim();
+        const url = document.getElementById('post-url').value.trim();
+        const content = document.getElementById('post-content').value.trim();
+
+        if (!devName) {
+          alert('Please select a valid developer reference');
+          return;
+        }
+
+        const result = await window.dataSdk.create({
+          type: 'post',
+          developer_ref: devRef,
+          developer_name: devName,
+          poster_name: posterName,
+          post_content: content,
+          post_url: url,
+          email: '',
+          status: 'complete',
+          created_at: new Date().toISOString(),
+          next_notification_due: ''
+        });
+
+        if (result.isOk) {
+          postForm.reset();
+          postDevName.value = '';
+          postSuccess.classList.remove('hidden');
+          setTimeout(() => postSuccess.classList.add('hidden'), 3000);
+        }
+      });
+
+      // Developers Search/Filter
+      const devSearch = document.getElementById('dev-search');
+      const devFilterStatus = document.getElementById('dev-filter-status');
+
+      devSearch.addEventListener('input', renderDevelopers);
+      devFilterStatus.addEventListener('change', renderDevelopers);
+
+      function updateDashboard() {
+        // Update submissions tab
+        const uniqueDevelopers = [...new Set(allRecords.filter(r => r.type !== 'post').map(r => r.developer_ref))];
+        const posts = allRecords.filter(r => r.type === 'post');
+
+        document.getElementById('total-submissions').textContent = allRecords.filter(r => r.type !== 'post').length;
+        document.getElementById('total-posts').textContent = posts.length;
+        document.getElementById('active-developers').textContent = uniqueDevelopers.length;
+
+        renderSubmissionsTable();
+        renderPostsTable();
+        renderDevelopers();
+        updateAnalytics();
+      }
+
+      function renderSubmissionsTable() {
+        const submissions = allRecords.filter(r => r.type !== 'post');
+        const table = document.getElementById('submissions-table');
+
+        if (submissions.length === 0) {
+          table.innerHTML = `
+            <tr>
+              <td colspan="6" class="px-6 py-12 text-center text-slate-400">
+                <i data-lucide="inbox" style="width:40px;height:40px;margin:0 auto 12px;opacity:0.3;"></i>
+                <p>No form submissions yet</p>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        table.innerHTML = submissions.map(sub => {
+          const posts = allRecords.filter(r => r.developer_ref === sub.developer_ref && r.type === 'post').length;
+          const date = new Date(sub.created_at).toLocaleDateString();
+          return `
+            <tr class="border-t border-slate-700/50 hover:bg-slate-800/30 transition">
+              <td class="px-6 py-4 text-slate-300 font-mono text-xs">${sub.developer_ref}</td>
+              <td class="px-6 py-4 text-slate-100">${sub.developer_name}</td>
+              <td class="px-6 py-4 text-slate-400 text-xs">${sub.email}</td>
+              <td class="px-6 py-4 text-slate-300">${posts}</td>
+              <td class="px-6 py-4"><span class="status-badge status-${sub.status}">${sub.status.charAt(0).toUpperCase() + sub.status.slice(1)}</span></td>
+              <td class="px-6 py-4 text-slate-400 text-xs">${date}</td>
+            </tr>
+          `;
+        }).join('');
+        lucide.createIcons();
+      }
+
+      function renderPostsTable() {
+        const posts = allRecords.filter(r => r.type === 'post');
+        const table = document.getElementById('posts-table');
+
+        if (posts.length === 0) {
+          table.innerHTML = `
+            <tr>
+              <td colspan="5" class="px-6 py-12 text-center text-slate-400">
+                <i data-lucide="share-2" style="width:40px;height:40px;margin:0 auto 12px;opacity:0.3;"></i>
+                <p>No posts submitted yet</p>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        table.innerHTML = posts.map(post => {
+          const date = new Date(post.created_at).toLocaleDateString();
+          const preview = post.post_content.substring(0, 50) + (post.post_content.length > 50 ? '...' : '');
+          return `
+            <tr class="border-t border-slate-700/50 hover:bg-slate-800/30 transition">
+              <td class="px-6 py-4 text-slate-100">${post.developer_name}</td>
+              <td class="px-6 py-4 text-slate-100">${post.poster_name}</td>
+              <td class="px-6 py-4">
+                <a href="${post.post_url}" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:text-emerald-300 text-xs truncate">
+                  ${new URL(post.post_url).hostname}
+                </a>
+              </td>
+              <td class="px-6 py-4 text-slate-400 text-xs">${preview}</td>
+              <td class="px-6 py-4 text-slate-400 text-xs">${date}</td>
+            </tr>
+          `;
+        }).join('');
+        lucide.createIcons();
+      }
+
+      function renderDevelopers() {
+        const searchTerm = devSearch.value.toLowerCase();
+        const filterStatus = devFilterStatus.value;
+        const uniqueDevelopers = [...new Set(allRecords.filter(r => r.type !== 'post').map(r => r.developer_ref))];
+
+        const filtered = uniqueDevelopers.map(ref => {
+          const dev = allRecords.find(r => r.developer_ref === ref);
+          return dev;
+        }).filter(dev => {
+          const matchesSearch = dev.developer_name.toLowerCase().includes(searchTerm) || dev.developer_ref.toLowerCase().includes(searchTerm);
+          const matchesStatus = !filterStatus || dev.status === filterStatus;
+          return matchesSearch && matchesStatus;
+        });
+
+        const grid = document.getElementById('developers-grid');
+        if (filtered.length === 0) {
+          grid.innerHTML = `
+            <div class="col-span-full text-center py-12">
+              <i data-lucide="users" style="width:40px;height:40px;margin:0 auto 12px;opacity:0.3;"></i>
+              <p class="text-slate-400">No developers found</p>
+            </div>
+          `;
+          return;
+        }
+
+        grid.innerHTML = filtered.map(dev => {
+          const nextDue = dev.next_notification_due ? new Date(dev.next_notification_due).toLocaleDateString() : 'N/A';
+          return `
+            <div class="rounded-xl border border-slate-700/50 bg-slate-900/30 p-6 hover:border-emerald-500/30 transition">
+              <div class="flex items-start justify-between mb-4">
+                <div>
+                  <h3 class="font-semibold text-slate-100">${dev.developer_name}</h3>
+                  <p class="text-xs text-slate-400 font-mono">${dev.developer_ref}</p>
+                </div>
+                <span class="status-badge status-${dev.status}">${dev.status.charAt(0).toUpperCase() + dev.status.slice(1)}</span>
+              </div>
+              <div class="space-y-2 text-sm">
+                <p class="text-slate-400"><span class="text-slate-500">Email:</span> ${dev.email}</p>
+                <p class="text-slate-400"><span class="text-slate-500">Next Notification:</span> ${nextDue}</p>
+              </div>
+            </div>
+          `;
+        }).join('');
+        lucide.createIcons();
+      }
+
+      function updateAnalytics() {
+        const submissions = allRecords.filter(r => r.type !== 'post');
+        const posts = allRecords.filter(r => r.type === 'post');
+        const devs = new Set(submissions.map(r => r.developer_ref)).size;
+
+        const complete = submissions.filter(s => s.status === 'complete').length;
+        const pending = submissions.filter(s => s.status === 'pending').length;
+        const upcoming = submissions.filter(s => s.status === 'upcoming').length;
+        const total = complete + pending + upcoming;
+
+        // Update key metric cards
+        document.getElementById('analytics-complete').textContent = complete;
+        document.getElementById('analytics-pending').textContent = pending;
+        document.getElementById('analytics-upcoming').textContent = upcoming;
+        document.getElementById('analytics-posts').textContent = posts.length;
+        document.getElementById('analytics-devs').textContent = devs;
+        document.getElementById('analytics-posts-activity').textContent = posts.length;
+        document.getElementById('analytics-avg').textContent = devs > 0 ? (posts.length / devs).toFixed(1) : '0';
+
+        // Update progress bars with percentages
+        if (total > 0) {
+          const completePct = ((complete / total) * 100);
+          const pendingPct = ((pending / total) * 100);
+          const upcomingPct = ((upcoming / total) * 100);
+
+          document.getElementById('analytics-complete-bar').style.width = completePct + '%';
+          document.getElementById('analytics-pending-bar').style.width = pendingPct + '%';
+          document.getElementById('analytics-upcoming-bar').style.width = upcomingPct + '%';
+
+          document.getElementById('analytics-complete-pct').textContent = Math.round(completePct) + '%';
+          document.getElementById('analytics-pending-pct').textContent = Math.round(pendingPct) + '%';
+          document.getElementById('analytics-upcoming-pct').textContent = Math.round(upcomingPct) + '%';
+        }
+
+        // Update developer performance list
+        const uniqueDevelopers = [...new Set(submissions.map(r => r.developer_ref))];
+        const devList = document.getElementById('analytics-dev-list');
+
+        if (uniqueDevelopers.length === 0) {
+          devList.innerHTML = '<div class="text-center py-8"><p class="text-slate-400">No data yet</p></div>';
+          return;
+        }
+
+        const devPerformance = uniqueDevelopers.map(ref => {
+          const dev = submissions.find(r => r.developer_ref === ref);
+          const devPosts = posts.filter(p => p.developer_ref === ref).length;
+          return { dev, devPosts };
+        }).sort((a, b) => b.devPosts - a.devPosts);
+
+        devList.innerHTML = devPerformance.map(({ dev, devPosts }) => {
+          const statusColor = dev.status === 'complete' ? 'text-emerald-400' : dev.status === 'pending' ? 'text-orange-400' : 'text-blue-400';
+          const statusBg = dev.status === 'complete' ? 'bg-emerald-500/10' : dev.status === 'pending' ? 'bg-orange-500/10' : 'bg-blue-500/10';
+          return `
+            <div class="flex items-center justify-between p-4 rounded-lg bg-slate-800/30 border border-slate-700/30 hover:border-slate-600/50 transition">
+              <div class="flex items-center gap-3 flex-1">
+                <div class="flex items-center justify-center w-10 h-10 rounded-lg ${statusBg}">
+                  <span class="text-sm font-semibold ${statusColor}">${devPosts}</span>
+                </div>
+                <div class="flex-1">
+                  <p class="text-sm font-medium text-slate-100">${dev.developer_name}</p>
+                  <p class="text-xs text-slate-500 font-mono">${dev.developer_ref}</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-4">
+                <span class="text-xs text-slate-400">Posts: <span class="font-semibold text-slate-200">${devPosts}</span></span>
+                <span class="status-badge status-${dev.status}">${dev.status.charAt(0).toUpperCase() + dev.status.slice(1)}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+        lucide.createIcons();
+      }
+
+      function switchMode(mode) {
+        document.getElementById('auth-screen').classList.toggle('hidden', mode !== 'auth');
+        document.getElementById('dashboard-screen').classList.toggle('hidden', mode !== 'dashboard');
+        document.getElementById('client-screen').classList.toggle('hidden', mode !== 'client');
+        currentMode = mode;
+        lucide.createIcons();
+      }
+
+      lucide.createIcons();
+    });
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9dfa107362da27c9',t:'MTc3NDA2NTc3OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

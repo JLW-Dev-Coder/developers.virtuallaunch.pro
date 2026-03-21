@@ -76,7 +76,7 @@
      <div class="max-w-2xl mx-auto">
       <div class="text-center mb-8">
        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 mb-4 shadow-lg shadow-emerald-500/25">
-        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
        </div>
        <h1 id="form-title" class="text-2xl sm:text-3xl font-bold text-slate-100 tracking-tight mb-3">Launch Your Virtual Business Today</h1>
        <p id="form-instructions" class="text-slate-400 text-sm sm:text-base leading-relaxed max-w-lg mx-auto">Complete this form to get started with VLP. We'll review your profile and connect you with the right coach.</p>
@@ -199,10 +199,6 @@
        </div>
 
        <!-- Reference number display (shown after success, before payment) -->
-       <div id="ref-display" class="hidden rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-5 py-4 text-sm text-emerald-200">
-        Your reference number: <span id="ref-number" class="font-mono font-bold text-emerald-300"></span> — save this to check your status on the Support page.
-       </div>
-
        <!-- Error Message -->
        <div id="form-error" class="hidden text-sm text-red-400 bg-red-950/30 border border-red-800 rounded-lg px-4 py-3"></div>
 
@@ -210,9 +206,9 @@
        <button type="submit" id="submit-btn" class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-semibold text-sm py-4 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2">
         <span id="submit-text">Continue to Payment</span>
         <span id="submit-spinner" class="hidden">
-         <svg class="animate-spin h-4 w-4 text-slate-950" xmlns="http://www.w3.org/2000/svg" fill="none" viewbox="0 0 24 24">
+         <svg class="animate-spin h-4 w-4 text-slate-950" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
          </svg>
         </span>
        </button>
@@ -428,8 +424,7 @@
 
               form.reset();
               // Small delay so the user sees the reference before the page switches
-              sessionStorage.setItem('vlp_ref', payload.eventId);
-              setTimeout(() => { window.location.href = '/success.html'; }, 1800);
+              showPage('payment-page');
             }
           } else {
             showError('Submission failed: ' + (result.error || 'unknown_error') + '. Please try again.');
@@ -447,3 +442,4 @@
   </script>
  </body>
 </html>
+

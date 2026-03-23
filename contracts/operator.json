@@ -1,85 +1,38 @@
 {
   "auth": {
     "required": true,
-    "trustClientIdentityFields": false,
-    "type": "session"
+    "type": "operator",
+    "fields": ["email", "accessCode"],
+    "sessionCookie": "vlp_operator_session"
   },
   "contract": {
-    "authority": ["R2_VIRTUAL_LAUNCH"],
-    "governs": "Operator dashboard for managing submissions, posts, developers, analytics, and operator-adjustable scheduled notifications.",
-    "path": "app/contracts/dashboard/dashboard.contract.json",
-    "source": "Virtual Launch Pro",
-    "title": "Virtual Launch Pro — Dashboard Contract",
-    "usedOnPages": ["/dashboard.html"],
-    "validation": {
-      "enumStrict": true,
-      "normalizeCheckboxToBoolean": true,
-      "rejectUnknownValues": true,
-      "requireJsonContentType": true
-    },
+    "title": "VLP Operator Dashboard Contract",
     "version": 2
   },
-  "delivery": {
-    "endpoint": "/forms/dashboard",
-    "method": "POST",
-    "receiptKeyPattern": "receipts/{source}/{eventId}.json",
-    "receiptSource": "dashboard",
-    "signature": {
-      "header": null,
-      "required": false,
-      "secretEnvVar": null
+  "endpoints": {
+    "auth":         { "path": "/operator/auth",         "method": "POST" },
+    "submissions":  { "path": "/operator/submissions",  "method": "GET"  },
+    "post":         { "path": "/operator/post",         "method": "POST" },
+    "developers":   { "path": "/operator/developers",   "method": "GET"  },
+    "analytics":    { "path": "/operator/analytics",    "method": "GET"  },
+    "developerRef": { "path": "/operator/developer",    "method": "GET"  }
+  },
+  "postPayload": {
+    "required": ["developerRef", "postContent"],
+    "properties": {
+      "developerRef":        { "type": "string" },
+      "developerName":       { "type": "string" },
+      "posterName":          { "type": "string" },
+      "postContent":         { "type": "string" },
+      "postUrl":             { "type": "string" },
+      "dueDate":             { "type": "string" },
+      "cronSchedule":        { "type": "string" },
+      "status":              { "type": "string", "enum": ["complete","pending","upcoming"] },
+      "nextNotificationDue": { "type": "string" }
     }
   },
-  "effects": {
-    "dedupeKey": "payload.eventId",
-    "eventIdFrom": "payload.eventId",
-    "receiptAppend": { "to": "receipts/{source}/{eventId}.json" },
-    "canonicalPatch": {
-      "createdAt": "{system.nowIso}",
-      "eventId": "{payload.eventId}",
-      "recordId": "{payload.eventId}",
-      "status": "submitted",
-      "updatedAt": "{system.nowIso}"
-    },
-    "canonicalUpsert": {
-      "patchFrom": "effects.canonicalPatch",
-      "target": "dashboard-records/{recordId}.json"
-    },
-    "writeOrder": ["receiptAppend","canonicalUpsert"],
-    "writes": ["dashboard-records"]
-  },
-  "payload": {
-    "additionalProperties": false,
-    "properties": {
-      "eventId": { "minLength": 1, "type": "string" },
-      "developerRef": { "minLength": 1, "type": "string" },
-      "developerName": { "minLength": 1, "type": "string" },
-      "posterName": { "minLength": 1, "type": "string" },
-      "postContent": { "minLength": 1, "maxLength": 5000, "type": "string" },
-      "postUrl": { "minLength": 1, "type": "string" },
-      "status": { "enum": ["complete","pending","upcoming"], "type": "string" },
-      "createdAt": { "format": "date-time", "type": "string" },
-      "dueDate": {
-        "format": "date-time",
-        "type": "string",
-        "description": "Next scheduled action or notification date; operator-editable."
-      },
-      "cronSchedule": {
-        "type": "string",
-        "pattern": "^(?:\\*|[0-5]?\\d) (?:\\*|1?\\d|2[0-3]) (?:\\*|0?[1-9]|[12]\\d|3[01]) (?:\\*|0?[1-9]|1[0-2]) (?:\\*|[0-6])$",
-        "description": "CRON expression for auto-calculating dueDate (default every 3 days)"
-      },
-      "nextNotificationDue": { "format": "date-time", "type": "string" }
-    },
-    "required": [
-      "eventId","developerRef","developerName","status","createdAt","dueDate","cronSchedule"
-    ],
-    "type": "object"
-  },
-  "response": {
-    "deduped": { "deduped": true, "eventId": "{effects.eventIdFrom}", "ok": true },
-    "error": { "error": "validation_failed", "ok": false },
-    "success": { "eventId": "{effects.eventIdFrom}", "ok": true, "status": "submitted" }
-  },
-  "schema": { "name": "vlp_dashboard_flow", "version": 2 }
+  "storage": {
+    "dashboardRecords": "dashboard-records/{developerRef}.json",
+    "onboardingRecords": "onboarding-records/{eventId}.json"
+  }
 }

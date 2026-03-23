@@ -100,6 +100,11 @@
                 class="field-focus w-full border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-100 bg-slate-900 placeholder-slate-600 transition">
             </div>
             <div>
+              <label for="r-role" class="block text-sm font-medium text-slate-300 mb-1.5">Role / Company *</label>
+              <input type="text" id="r-role" placeholder="e.g. Full Stack Developer, CTO at Acme Corp" required
+                class="field-focus w-full border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-100 bg-slate-900 placeholder-slate-600 transition">
+            </div>
+            <div>
               <label class="block text-sm font-medium text-slate-300 mb-2">Rating *</label>
               <div class="flex gap-2" id="star-row">
                 <button type="button" class="star-btn w-12 h-12 flex items-center justify-center rounded-lg border border-slate-700 bg-slate-900 hover:border-emerald-500/50 hover:bg-emerald-500/10 transition-all" data-rating="1"><i data-lucide="star" style="width:20px;height:20px;color:#10b981;"></i></button>
@@ -198,6 +203,12 @@
   </div>
 
   <script>
+  function generateEventId() {
+    const ts  = Date.now().toString(36).toUpperCase();
+    const rnd = Math.random().toString(36).slice(2, 7).toUpperCase();
+    return 'VLP-' + ts + rnd;
+  }
+
   document.addEventListener('DOMContentLoaded', async function () {
     lucide.createIcons();
 
@@ -250,7 +261,7 @@
     // ── load reviews from R2 ──────────────────────────────────────────────────
     let allReviews = [];
     try {
-      const res = await fetch('/forms/reviews');
+      const res = await fetch('/forms/review-submit');
       const data = await res.json();
       allReviews = data.ok ? (data.reviews || []) : [];
     } catch (e) {
@@ -291,8 +302,11 @@
       const email  = document.getElementById('r-email').value.trim();
       const text   = document.getElementById('r-text').value.trim();
 
+      const role   = document.getElementById('r-role').value.trim();
+
       if (!first || !last)   { showError('Please enter your first and last name.'); return; }
       if (!email)            { showError('Please enter your email address.'); return; }
+      if (!role)             { showError('Please enter your role or company.'); return; }
       if (!selectedRating)   { showError('Please select a star rating.'); return; }
       if (!text)             { showError('Please write a review.'); return; }
 
@@ -302,16 +316,16 @@
       btn.disabled = true;
 
       const payload = {
+        eventId:      generateEventId(),
         author_name:  `${first} ${last}`,
         author_email: email,
-        author_role:  '',
+        author_role:  role,
         rating:       selectedRating,
-        review_text:  text,
-        created_at:   new Date().toISOString()
+        review_text:  text
       };
 
       try {
-        const res  = await fetch('/forms/reviews', {
+        const res  = await fetch('/forms/review-submit', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify(payload)

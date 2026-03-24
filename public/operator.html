@@ -635,7 +635,7 @@
   // x-operator-key auth for new endpoints
   async function keyApiFetch(url, options = {}) {
     if (!operatorKey) {
-      const k = prompt('Enter your Operator API Key:');
+      const k = (prompt('Enter your Operator API Key:') || '').trim();
       if (!k) return null;
       operatorKey = k;
       sessionStorage.setItem('vlp_operator_key', k);
@@ -647,12 +647,13 @@
     };
     let res;
     try {
+      console.log('operator key length:', operatorKey.length, 'value:', JSON.stringify(operatorKey));
       res = await fetch(url, { ...options, headers });
     } catch {
       return null;
     }
     if (res.status === 401) {
-      const k = prompt('Invalid operator key. Re-enter your Operator API Key:');
+      const k = (prompt('Invalid operator key. Re-enter your Operator API Key:') || '').trim();
       if (!k) return null;
       operatorKey = k;
       sessionStorage.setItem('vlp_operator_key', k);

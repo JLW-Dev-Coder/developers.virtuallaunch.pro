@@ -95,11 +95,6 @@
         </div>
         <form id="login-form" class="space-y-4" novalidate>
           <div>
-            <label for="login-email" class="block text-sm font-medium text-slate-300 mb-1.5">Email</label>
-            <input type="email" id="login-email" placeholder="operator@virtuallaunch.pro" autocomplete="email"
-              class="field-focus w-full border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-100 bg-slate-900 placeholder-slate-600 transition">
-          </div>
-          <div>
             <label for="login-code" class="block text-sm font-medium text-slate-300 mb-1.5">Access Code</label>
             <input type="password" id="login-code" placeholder="••••••••" autocomplete="current-password"
               class="field-focus w-full border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-100 bg-slate-900 placeholder-slate-600 transition">
@@ -534,7 +529,7 @@
   // ── Init ──────────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
-    if (token) showDashboard();
+    if (operatorKey) showDashboard();
 
     // Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -544,27 +539,29 @@
     // Login form
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email      = document.getElementById('login-email').value.trim();
-      const accessCode = document.getElementById('login-code').value;
-      const errEl      = document.getElementById('login-error');
+      const key   = document.getElementById('login-code').value.trim();
+      const errEl = document.getElementById('login-error');
       errEl.classList.add('hidden');
 
-      document.getElementById('login-btn-text').textContent  = 'Signing in…';
+      document.getElementById('login-btn-text').textContent = 'Signing in…';
       document.getElementById('login-spinner').classList.remove('hidden');
       document.getElementById('login-btn').disabled = true;
 
       try {
-        const res  = await fetch('/operator/auth', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, accessCode })
+        const res = await fetch('/operator/profiles', {
+          headers: { 'x-operator-key': key }
         });
-        const data = await res.json();
-        if (data.ok && data.token) {
-          token = data.token;
-          sessionStorage.setItem('vlp_operator_token', token);
-          showDashboard();
+        if (res.ok) {
+          const data = await res.json();
+          operatorKey = key;
+          sessionStorage.setItem('vlp_operator_key', key);
+          showDashboard(data.profiles || []);
+        } else if (res.status === 401) {
+          errEl.textContent = 'Invalid key — please try again';
+          errEl.classList.remove('hidden');
+          document.getElementById('login-code').value = '';
         } else {
+          errEl.textContent = 'An error occurred — please try again';
           errEl.classList.remove('hidden');
         }
       } catch {
@@ -664,17 +661,20 @@
 
   function logout() {
     sessionStorage.removeItem('vlp_operator_token');
+    sessionStorage.removeItem('vlp_operator_key');
     token = null;
+    operatorKey = '';
     document.getElementById('dashboard-screen').classList.add('hidden');
     document.getElementById('login-screen').classList.remove('hidden');
     document.getElementById('header-logout').classList.add('hidden');
   }
 
   // ── Screen transitions ────────────────────────────────────────────────────────
-  function showDashboard() {
+  function showDashboard(profilesData) {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('dashboard-screen').classList.remove('hidden');
     document.getElementById('header-logout').classList.remove('hidden');
+    if (profilesData) allProfiles = profilesData;
     loadSubmissions();
     loadAnalytics();
   }

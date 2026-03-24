@@ -577,7 +577,7 @@
     document.getElementById('pf-ref').addEventListener('blur', async () => {
       const ref = document.getElementById('pf-ref').value.trim();
       if (!ref) return;
-      const res = await apiFetch(`/operator/developer?ref=${encodeURIComponent(ref)}`);
+      const res = await keyApiFetch(`/operator/developer?ref=${encodeURIComponent(ref)}`);
       if (!res) return;
       const data = await res.json();
       document.getElementById('pf-name').value = data.ok ? data.name : '';
@@ -611,23 +611,6 @@
     document.getElementById('ef-preview-btn').addEventListener('click', showEmailPreview);
     document.getElementById('email-form').addEventListener('submit', handleEmailSend);
   });
-
-  // ── Auth helpers ──────────────────────────────────────────────────────────────
-  async function apiFetch(url, options = {}) {
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      ...(options.headers || {})
-    };
-    let res;
-    try {
-      res = await fetch(url, { ...options, headers });
-    } catch {
-      return null;
-    }
-    if (res.status === 401) { logout(); return null; }
-    return res;
-  }
 
   // x-operator-key auth for new endpoints
   async function keyApiFetch(url, options = {}) {
@@ -674,17 +657,18 @@
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('dashboard-screen').classList.remove('hidden');
     document.getElementById('header-logout').classList.remove('hidden');
+    lucide.createIcons();
     if (profilesData) allProfiles = profilesData;
-    loadSubmissions();
-    loadAnalytics();
+    populateSubmissionsFromProfiles();
+    populateAnalyticsFromProfiles();
   }
 
   function switchTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tab));
     if (tab === 'developers')  loadDevelopers();
-    if (tab === 'analytics')   loadAnalytics();
-    if (tab === 'submissions') loadSubmissions();
+    if (tab === 'analytics')   populateAnalyticsFromProfiles();
+    if (tab === 'submissions') populateSubmissionsFromProfiles();
     if (tab === 'profiles')    loadProfiles();
     if (tab === 'jobposts')    loadJobPosts();
     if (tab === 'bulkemail')   loadJobsForEmailForm();
@@ -728,35 +712,26 @@
   }
 
   // ── TAB 1: Form Submissions ───────────────────────────────────────────────────
-  async function loadSubmissions() {
+  function populateSubmissionsFromProfiles() {
     const tbody = document.getElementById('sub-table-body');
-    tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-8 text-center text-slate-500 text-sm">Loading…</td></tr>';
-
-    const res = await apiFetch('/operator/submissions');
-    if (!res) return;
-    const data = await res.json();
-    if (!data.ok) { tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-8 text-center text-red-400 text-sm">Error loading submissions</td></tr>'; return; }
-
-    const list = data.submissions || [];
+    const list = allProfiles;
     document.getElementById('s-total').textContent  = list.length;
-    document.getElementById('s-posts').textContent  = list.reduce((a, s) => a + (s.posts || 0), 0);
-    document.getElementById('s-active').textContent = list.filter(s => (s.posts || 0) > 0).length;
+    document.getElementById('s-posts').textContent  = '—';
+    document.getElementById('s-active').textContent = list.filter(p => p.publish_profile === true).length;
 
     if (list.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-8 text-center text-slate-500 text-sm">No submissions yet.</td></tr>';
       return;
     }
-
-    tbody.innerHTML = list.map(s => `
+    tbody.innerHTML = list.map(p => `
       <tr class="border-b border-slate-800/40 hover:bg-slate-800/20 transition-colors">
-        <td class="px-5 py-3.5 font-mono text-xs text-emerald-400">${esc(s.ref)}</td>
-        <td class="px-5 py-3.5 text-slate-200 text-sm">${esc(s.full_name)}</td>
-        <td class="px-5 py-3.5 text-slate-400 text-xs">${esc(s.email)}</td>
-        <td class="px-5 py-3.5 text-slate-300 text-sm">${s.posts || 0}</td>
-        <td class="px-5 py-3.5">${badgeHtml(s.status)}</td>
-        <td class="px-5 py-3.5 text-slate-500 text-xs">${fmtDate(s.createdAt)}</td>
+        <td class="px-5 py-3.5 font-mono text-xs text-emerald-400">${esc(p.eventId || '—')}</td>
+        <td class="px-5 py-3.5 text-slate-200 text-sm">${esc(p.full_name || '—')}</td>
+        <td class="px-5 py-3.5 text-slate-400 text-xs">${esc(p.email || '—')}</td>
+        <td class="px-5 py-3.5 text-slate-300 text-sm">—</td>
+        <td class="px-5 py-3.5">${badgeHtml(p.status || 'pending')}</td>
+        <td class="px-5 py-3.5 text-slate-500 text-xs">${fmtDate(p.createdAt)}</td>
       </tr>`).join('');
-
     lucide.createIcons();
   }
 
@@ -797,7 +772,7 @@
       dueDate:       document.getElementById('pf-due').value
     };
 
-    const res  = await apiFetch('/operator/post', {
+    const res  = await keyApiFetch('/operator/post', {
       method: 'POST',
       body:   JSON.stringify(body)
     });
@@ -826,7 +801,7 @@
     const container = document.getElementById('dev-cards');
     container.innerHTML = '<p class="text-slate-500 text-sm col-span-3">Loading…</p>';
 
-    const res = await apiFetch('/operator/developers');
+    const res = await keyApiFetch('/operator/developers');
     if (!res) return;
     const data = await res.json();
     if (!data.ok) { container.innerHTML = '<p class="text-red-400 text-sm col-span-3">Error loading developers.</p>'; return; }
@@ -1117,29 +1092,29 @@
   }
 
   // ── TAB 4: Analytics ─────────────────────────────────────────────────────────
-  async function loadAnalytics() {
-    const res = await apiFetch('/operator/analytics');
-    if (!res) return;
-    const data = await res.json();
-    if (!data.ok) return;
+  function populateAnalyticsFromProfiles() {
+    const list = allProfiles;
+    const complete = list.filter(p => p.status === 'complete').length;
+    const pending  = list.filter(p => p.status === 'pending').length;
+    const upcoming = list.filter(p => p.status === 'upcoming').length;
+    const active   = list.filter(p => p.publish_profile === true).length;
 
-    const a = data.analytics;
-    document.getElementById('a-complete').textContent = a.complete;
-    document.getElementById('a-pending').textContent  = a.pending;
-    document.getElementById('a-upcoming').textContent = a.upcoming;
-    document.getElementById('a-posts').textContent    = a.totalPosts;
-    document.getElementById('a-active').textContent   = a.activeDevelopers;
-    document.getElementById('a-avg').textContent      = a.avgPostsPerDeveloper;
+    document.getElementById('a-complete').textContent = complete;
+    document.getElementById('a-pending').textContent  = pending;
+    document.getElementById('a-upcoming').textContent = upcoming;
+    document.getElementById('a-posts').textContent    = '—';
+    document.getElementById('a-active').textContent   = active;
+    document.getElementById('a-avg').textContent      = '—';
 
-    const total = (a.complete + a.pending + a.upcoming) || 1;
+    const total = (complete + pending + upcoming) || 1;
     const setPct = (id, lblId, val) => {
       const pct = Math.round((val / total) * 100);
       document.getElementById(id).style.width = pct + '%';
-      document.getElementById(lblId).textContent = `${val} (${pct}%)`;
+      document.getElementById(lblId).textContent = val + ' (' + pct + '%)';
     };
-    setPct('bar-complete', 'bar-complete-label', a.complete);
-    setPct('bar-pending',  'bar-pending-label',  a.pending);
-    setPct('bar-upcoming', 'bar-upcoming-label', a.upcoming);
+    setPct('bar-complete', 'bar-complete-label', complete);
+    setPct('bar-pending',  'bar-pending-label',  pending);
+    setPct('bar-upcoming', 'bar-upcoming-label', upcoming);
   }
   </script>
 

@@ -7,3 +7,12 @@ type = "javascript"
 binding = "ONBOARDING_R2"
 bucket_name = "onboarding-records"
 preview_bucket_name = "onboarding-records"
+
+# Stripe env vars — set actual secret values in Cloudflare dashboard, never here
+# STRIPE_SECRET_KEY     — Stripe API secret key (live or test)
+# STRIPE_WEBHOOK_SECRET — Stripe webhook signing secret
+# STRIPE_PRICE_FREE     — Free plan price ID (price_1TD7P79ROeyeXOqeuTnVu3oS)
+# STRIPE_PRICE_PAID     — $2.99 recurring price ID (price_1TEtJw9ROeyeXOqeG9pEHCEt)
+[vars]
+STRIPE_PRICE_FREE = "REPLACE_IN_DASHBOARD"
+STRIPE_PRICE_PAID = "REPLACE_IN_DASHBOARD"

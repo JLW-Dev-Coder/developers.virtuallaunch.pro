@@ -23,26 +23,39 @@
     "framework": "Cloudflare Workers + Cloudflare Pages Functions",
     "runtime": "workerd",
     "routes": [
-      { "method": "POST",  "path": "/forms/onboarding",         "handler": "functions/forms/onboarding.js#onRequestPost",  "description": "Submit new onboarding record to R2" },
-      { "method": "GET",   "path": "/forms/onboarding",         "handler": "functions/forms/onboarding.js#onRequestGet",   "description": "Fetch record for form pre-fill by ?ref=VLP-xxx" },
-      { "method": "PATCH", "path": "/forms/onboarding",         "handler": "functions/forms/onboarding.js#onRequestPatch", "description": "Update existing record (plan, archived, status, etc.)" },
-      { "method": "GET",   "path": "/forms/support/status",     "handler": "workers/src/index.js#handleSupportStatus",     "description": "Support status lookup by ?clientRef=VLP-xxx" },
-      { "method": "GET",   "path": "/forms/developers",         "handler": "functions/forms/developers.js",                "description": "List published developer profiles" }
+      { "method": "POST",  "path": "/forms/onboarding",              "handler": "functions/forms/onboarding.js#onRequestPost",          "description": "Submit new onboarding record to R2" },
+      { "method": "GET",   "path": "/forms/onboarding",              "handler": "functions/forms/onboarding.js#onRequestGet",           "description": "Fetch record for form pre-fill by ?ref=VLP-xxx" },
+      { "method": "PATCH", "path": "/forms/onboarding",              "handler": "functions/forms/onboarding.js#onRequestPatch",         "description": "Update existing record (plan, archived, status, etc.)" },
+      { "method": "GET",   "path": "/forms/support/status",          "handler": "workers/src/index.js#handleSupportStatus",            "description": "Support status lookup by ?clientRef=VLP-xxx" },
+      { "method": "GET",   "path": "/forms/developers",              "handler": "functions/forms/developers.js",                       "description": "List published developer profiles" },
+      { "method": "POST",  "path": "/forms/stripe/create-session",   "handler": "functions/forms/stripe/create-session.js#onRequestPost", "description": "Create Stripe Checkout Session; returns { ok, url }" },
+      { "method": "POST",  "path": "/forms/stripe/webhook",          "handler": "functions/forms/stripe/webhook.js#onRequestPost",     "description": "Receive and verify Stripe webhook events; patch R2 record" },
+      { "method": "GET",   "path": "/forms/stripe/session-status",   "handler": "functions/forms/stripe/session-status.js#onRequestGet", "description": "Poll payment confirmation status by ?session_id=cs_xxx" }
     ],
-    "webhookHandler": null,
-    "webhookEventHandlers": [],
-    "sessionStatusEndpoint": null,
-    "sessionStatusResponseShape": null,
-    "missingEndpoints": [
-      "POST /webhooks/stripe — Stripe webhook receiver not yet implemented",
-      "GET  /session-status  — Payment session polling endpoint not yet implemented"
-    ]
+    "webhookHandler": "functions/forms/stripe/webhook.js",
+    "webhookEventHandlers": [
+      "checkout.session.completed",
+      "customer.subscription.created",
+      "customer.subscription.updated",
+      "customer.subscription.deleted",
+      "invoice.payment_succeeded",
+      "invoice.payment_failed"
+    ],
+    "sessionStatusEndpoint": "/forms/stripe/session-status",
+    "sessionStatusResponseShape": {
+      "ok": true,
+      "status": "processing | completed | error",
+      "plan": "free | paid | null",
+      "webhookConfirmed": "boolean",
+      "webhookEvent": "string | null"
+    },
+    "missingEndpoints": []
   },
   "stripe": {
-    "sdkVersion": null,
+    "sdkVersion": "20.4.1",
     "webhookEndpoint": "https://api.virtuallaunch.pro/v1/webhooks/stripe",
     "webhookSecret": "env:STRIPE_WEBHOOK_SECRET",
-    "successRedirect": "https://developer.virtuallaunch.pro/success.html",
+    "successRedirect": "https://developer.virtuallaunch.pro/success.html?session_id={CHECKOUT_SESSION_ID}",
     "webhookEvents": [
       "checkout.session.completed",
       "customer.subscription.created",
@@ -51,7 +64,14 @@
       "invoice.payment_succeeded",
       "invoice.payment_failed"
     ],
-    "implementationStatus": "NOT_IMPLEMENTED — no Stripe SDK, checkout creation, or webhook handler found in repo as of 2026-03-25"
+    "freePriceId": "price_1TD7P79ROeyeXOqeuTnVu3oS",
+    "paidPriceId": "price_1TEtJw9ROeyeXOqeG9pEHCEt",
+    "productId": "prod_UBULSPgsL0yRZv",
+    "checkoutMode": {
+      "free": "payment",
+      "paid": "subscription"
+    },
+    "implementationStatus": "IMPLEMENTED — create-session, webhook, and session-status Pages Functions live as of 2026-03-25"
   },
   "paymentStates": {
     "states": ["plan-selection", "processing", "completed", "error"],
@@ -60,18 +80,30 @@
     "completedTriggers": ["checkout.session.completed", "invoice.payment_succeeded"],
     "errorTriggers": ["invoice.payment_failed"],
     "pollingTimeoutSeconds": 30,
-    "implementationStatus": "PARTIAL — plan field persisted to R2 via PATCH; vl_payment_state key not yet in use; success.html reads vlp_ref from sessionStorage only"
+    "pollingIntervalSeconds": 2,
+    "implementationStatus": "IMPLEMENTED — vl_payment_state tracked in onboarding.html and success.html; success.html polls session-status every 2s up to 30s timeout"
   },
   "plans": [
     {
       "id": "free",
       "label": "Free",
+      "priceId": "price_1TD7P79ROeyeXOqeuTnVu3oS",
+      "checkoutMode": "payment",
+      "unitAmount": 0,
+      "recurring": false,
+      "paymentMethodCollection": "if_required",
       "usesStripeCheckout": true,
-      "captureFields": ["email", "fullName", "businessName"]
+      "captureFields": ["email", "full_name"]
     },
     {
       "id": "paid",
       "label": "$2.99/mo",
+      "priceId": "price_1TEtJw9ROeyeXOqeG9pEHCEt",
+      "checkoutMode": "subscription",
+      "unitAmount": 299,
+      "recurring": true,
+      "recurringInterval": "month",
+      "paymentMethodCollection": "always",
       "usesStripeCheckout": true,
       "captureFields": []
     }
@@ -81,17 +113,23 @@
     "r2Bucket": "onboarding-records",
     "recordKeyPattern": "onboarding-records/{eventId}.json",
     "sessionStorageKeys": {
-      "vlp_ref": "Reference number set by onboarding.html after successful form submission; read by success.html"
+      "vlp_ref": "Reference number (eventId) — set by onboarding.html on form submit; read by success.html and create-session",
+      "vlp_email": "User email — set by onboarding.html on form submit; read by create-session",
+      "vlp_full_name": "User full name — set by onboarding.html on form submit; read by create-session",
+      "vl_payment_state": "Current payment state: plan-selection | processing | completed | error"
     }
   },
   "env": [
     "ONBOARDING_R2",
     "GOOGLE_PRIVATE_KEY",
     "GOOGLE_CLIENT_EMAIL",
-    "STRIPE_WEBHOOK_SECRET"
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "STRIPE_PRICE_FREE",
+    "STRIPE_PRICE_PAID"
   ],
   "dependencies": {
-    "stripe": null,
+    "stripe": "20.4.1",
     "other": [
       "Cloudflare Workers / Pages Functions",
       "Cloudflare R2",
@@ -106,28 +144,26 @@
     "lastAuditDate": "2026-03-25",
     "filesRead": [
       ".claude/settings.local.json",
+      ".claude/CLAUDE.md",
+      ".claude/registry.json",
       "wrangler.toml",
       "workers/src/index.js",
       "functions/forms/onboarding.js",
+      "functions/forms/stripe/create-session.js",
+      "functions/forms/stripe/webhook.js",
+      "functions/forms/stripe/session-status.js",
       "public/onboarding.html",
       "public/success.html",
       "public/js/developers.js",
       "public/available.html",
       "contracts/registry.json",
-      "contracts/onboarding.json"
+      "contracts/onboarding.json",
+      "contracts/prod1_v1.json",
+      "contracts/price1_v1.json",
+      "contracts/price2_v1.json",
+      "package.json"
     ],
-    "nullsRemaining": [
-      "backend.webhookHandler",
-      "backend.sessionStatusEndpoint",
-      "backend.sessionStatusResponseShape",
-      "stripe.sdkVersion",
-      "dependencies.stripe"
-    ],
-    "openQuestions": [
-      "Is Stripe Checkout integration planned but not yet built, or handled by an external service?",
-      "Which host (Worker, Pages Function, external) will receive the Stripe webhook at api.virtuallaunch.pro?",
-      "Does success.html need to poll for payment confirmation, or is the vlp_ref handoff sufficient?",
-      "Should selectPlan('free') initiate a Stripe Checkout session (free trial) or bypass payment entirely?"
-    ]
+    "nullsRemaining": [],
+    "openQuestions": []
   }
 }

@@ -381,6 +381,26 @@
 
       </div><!-- /grid -->
 
+      <!-- Payment processing overlay (hidden by default) -->
+      <div id="payment-processing" class="hidden max-w-3xl mx-auto mt-10 flex flex-col items-center gap-4 py-8">
+       <div class="w-12 h-12 rounded-full border-4 border-emerald-500/30 border-t-emerald-500 animate-spin"></div>
+       <p class="text-slate-300 font-medium text-lg">Confirming your plan…</p>
+       <p class="text-slate-500 text-sm">You will be redirected to Stripe to complete payment.</p>
+      </div>
+
+      <!-- Payment error state (hidden by default) -->
+      <div id="payment-error" class="hidden max-w-3xl mx-auto mt-10 flex flex-col items-center gap-4 py-8">
+       <div class="w-12 h-12 rounded-full bg-red-950/40 border border-red-700/50 flex items-center justify-center">
+        <i data-lucide="alert-circle" style="width:24px;height:24px;color:#f87171;"></i>
+       </div>
+       <p class="text-slate-300 font-medium text-lg">Something went wrong</p>
+       <p id="payment-error-msg" class="text-slate-500 text-sm text-center max-w-sm">Unable to start checkout. Please try again.</p>
+       <button onclick="resetPaymentState()"
+        class="mt-2 px-6 py-2.5 border border-slate-700 hover:border-emerald-500/50 bg-slate-900/40 hover:bg-slate-800/60 text-slate-100 font-semibold text-sm rounded-lg transition-all duration-200">
+        Try Again
+       </button>
+      </div>
+
       <!-- Task 1: Delete Account button — centered below plans -->
       <div class="max-w-3xl mx-auto mt-10 flex flex-col items-center gap-3">
        <!-- Default state -->
@@ -585,8 +605,11 @@
 
             if (data.ok && data.data) {
               prefillForm(data.data);
-              // Task 1+2: store ref so delete/plan functions work after load
+              // Store ref and user details so payment page can use them
               _currentRefNumber = ref;
+              sessionStorage.setItem('vlp_ref',       ref);
+              sessionStorage.setItem('vlp_email',     data.data.email     || '');
+              sessionStorage.setItem('vlp_full_name', data.data.full_name || '');
               loadResult.textContent = 'Profile loaded. Make your changes and submit to update.';
               loadResult.className = 'mt-3 text-sm text-emerald-400';
             } else {
@@ -675,8 +698,11 @@
             spinner.classList.add('hidden');
 
             if (result.ok) {
-              // Task 1+2: store ref for payment page use; prefer plan from response, fall back to loaded plan
+              // Store ref and user details for payment page use
               _currentRefNumber = refNum;
+              sessionStorage.setItem('vlp_ref',       refNum);
+              sessionStorage.setItem('vlp_email',     email);
+              sessionStorage.setItem('vlp_full_name', name);
               showPaymentPage(result.plan || _loadedPlan || null);
             } else if (result.error === 'not_found') {
               showError('Reference number not found. Please check and try again.');
@@ -734,8 +760,11 @@
                 document.getElementById('ref-number').textContent = payload.eventId;
                 refDisplay.classList.remove('hidden');
 
-                // Task 1+2: store the new ref for payment page use
+                // Store ref and user details for payment page use
                 _currentRefNumber = payload.eventId;
+                sessionStorage.setItem('vlp_ref',       payload.eventId);
+                sessionStorage.setItem('vlp_email',     payload.email);
+                sessionStorage.setItem('vlp_full_name', payload.full_name);
                 form.reset();
                 showPaymentPage(null);
               }
@@ -753,8 +782,11 @@
         }
       });
 
-      // ── Task 2: plan state on payment page ────────────────────────────────────
+      // ── plan state on payment page ────────────────────────────────────────────
       function showPaymentPage(plan) {
+        // Set initial payment state
+        sessionStorage.setItem('vl_payment_state', 'plan-selection');
+        setPaymentUIState('plan-selection');
         setPlanState(plan);
         showPage('payment-page');
         lucide.createIcons();
@@ -813,26 +845,85 @@
         }
       }
 
-      // Task 2: selectPlan — save plan to profile then update UI
+      // selectPlan — initiate Stripe Checkout via Pages Function
       async function selectPlan(plan) {
         if (!_currentRefNumber) {
-          // No ref — just update UI, plan saves when user submits form
+          // No ref yet — just update UI preview; real checkout requires a submitted record
           setPlanState(plan);
           return;
         }
+
+        // Read user details from sessionStorage (set during form submit)
+        const email     = sessionStorage.getItem('vlp_email')     || '';
+        const full_name = sessionStorage.getItem('vlp_full_name') || '';
+
+        // Enter processing state
+        setPaymentUIState('processing');
+        sessionStorage.setItem('vl_payment_state', 'processing');
+
         try {
-          const res = await fetch('https://developers.virtuallaunch.pro/forms/onboarding', {
-            method: 'PATCH',
+          const res = await fetch('/forms/stripe/create-session', {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ref_number: _currentRefNumber, plan, confirmation: true })
+            body: JSON.stringify({
+              vlp_ref:   _currentRefNumber,
+              plan,
+              email,
+              full_name,
+            })
           });
           const data = await res.json();
-          if (data.ok) {
-            setPlanState(plan);
+
+          if (data.ok && data.url) {
+            // Redirect to Stripe Checkout
+            window.location.href = data.url;
+          } else {
+            sessionStorage.setItem('vl_payment_state', 'error');
+            setPaymentUIState('error', data.error || 'Checkout session could not be created.');
           }
         } catch (err) {
-          console.error('Plan save failed:', err);
+          console.error('create-session fetch failed:', err);
+          sessionStorage.setItem('vl_payment_state', 'error');
+          setPaymentUIState('error', 'Network error. Please check your connection and try again.');
         }
+      }
+
+      // setPaymentUIState — toggle which payment-page sub-UI is visible
+      function setPaymentUIState(state, errorMsg) {
+        const planGrid   = document.querySelector('#payment-page .grid');
+        const banner     = document.getElementById('upgrade-banner');
+        const processing = document.getElementById('payment-processing');
+        const errorEl    = document.getElementById('payment-error');
+        const errorMsgEl = document.getElementById('payment-error-msg');
+        const deleteArea = document.getElementById('delete-account-default')?.closest('.max-w-3xl');
+
+        if (state === 'processing') {
+          if (planGrid)   planGrid.style.display   = 'none';
+          if (banner)     banner.style.display     = 'none';
+          if (deleteArea) deleteArea.style.display = 'none';
+          processing.classList.remove('hidden');
+          errorEl.classList.add('hidden');
+        } else if (state === 'error') {
+          if (planGrid)   planGrid.style.display   = 'none';
+          if (banner)     banner.style.display     = 'none';
+          if (deleteArea) deleteArea.style.display = 'none';
+          processing.classList.add('hidden');
+          errorEl.classList.remove('hidden');
+          if (errorMsg && errorMsgEl) errorMsgEl.textContent = errorMsg;
+        } else {
+          // plan-selection (default)
+          if (planGrid)   planGrid.style.display   = '';
+          if (deleteArea) deleteArea.style.display = '';
+          processing.classList.add('hidden');
+          errorEl.classList.add('hidden');
+        }
+      }
+
+      // resetPaymentState — retry button in error state
+      function resetPaymentState() {
+        sessionStorage.setItem('vl_payment_state', 'plan-selection');
+        setPaymentUIState('plan-selection');
+        lucide.createIcons();
       }
 
       // Task 1: delete account UI helpers
@@ -890,10 +981,11 @@
       }
 
       // Expose to global scope (called from onclick attributes)
-      window.selectPlan = selectPlan;
-      window.showDeleteConfirm = showDeleteConfirm;
-      window.cancelDeleteConfirm = cancelDeleteConfirm;
-      window.executeDelete = executeDelete;
+      window.selectPlan        = selectPlan;
+      window.resetPaymentState = resetPaymentState;
+      window.showDeleteConfirm     = showDeleteConfirm;
+      window.cancelDeleteConfirm   = cancelDeleteConfirm;
+      window.executeDelete         = executeDelete;
 
     });
   </script>

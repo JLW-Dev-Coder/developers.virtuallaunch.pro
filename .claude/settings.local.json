@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(file \"c:\\\\Users\\\\britn\\\\OneDrive\\\\developer.virtuallaunch.pro\\\\public\\\\*.{png,jpg,jpeg,webp,gif}\")",
-      "Read(//etc/**)"
+      "Read(//etc/**)",
+      "Bash(npm install:*)",
+      "Bash(node -e \"console.log\\(require\\(''./node_modules/stripe/package.json''\\).version\\)\")"
     ]
   }
 }

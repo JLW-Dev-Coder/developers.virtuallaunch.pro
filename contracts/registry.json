@@ -17,5 +17,53 @@
       "writes": ["onboarding-records"]
     }
   ],
-  "registryVersion": 1
+  "registryVersion": 1,
+  "stripeEndpoints": [
+    {
+      "id": "stripe_create_session",
+      "category": "stripe",
+      "method": "POST",
+      "path": "functions/forms/stripe/create-session.js",
+      "endpoint": "/forms/stripe/create-session",
+      "status": "active",
+      "authRequired": false,
+      "signatureRequired": false,
+      "writes": ["onboarding-records"],
+      "version": 1
+    },
+    {
+      "id": "stripe_webhook",
+      "category": "stripe",
+      "method": "POST",
+      "path": "functions/forms/stripe/webhook.js",
+      "endpoint": "/forms/stripe/webhook",
+      "status": "active",
+      "authRequired": false,
+      "signatureRequired": true,
+      "signatureHeader": "stripe-signature",
+      "secretEnvVar": "STRIPE_WEBHOOK_SECRET",
+      "writes": ["onboarding-records"],
+      "handledEvents": [
+        "checkout.session.completed",
+        "customer.subscription.created",
+        "customer.subscription.updated",
+        "customer.subscription.deleted",
+        "invoice.payment_succeeded",
+        "invoice.payment_failed"
+      ],
+      "version": 1
+    },
+    {
+      "id": "stripe_session_status",
+      "category": "stripe",
+      "method": "GET",
+      "path": "functions/forms/stripe/session-status.js",
+      "endpoint": "/forms/stripe/session-status",
+      "status": "active",
+      "authRequired": false,
+      "signatureRequired": false,
+      "reads": ["onboarding-records"],
+      "version": 1
+    }
+  ]
 }

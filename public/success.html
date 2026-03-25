@@ -218,19 +218,19 @@
    </footer>
   </div>
 
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .animate-spin { animation: spin 1s linear infinite; }
+  </style>
   <script>
-    // ── Read reference from sessionStorage (set by onboarding.html on success) ──
     document.addEventListener('DOMContentLoaded', function () {
-      const ref = sessionStorage.getItem('vlp_ref');
-      if (ref) {
-        document.getElementById('ref-display').textContent = ref;
-      }
-
       window.elementSdk.init({
         defaultConfig: { success_headline: 'Success! Thank you for your investment.' },
         onConfigChange: (config) => {
           const el = document.getElementById('success-headline');
-          if (el) el.textContent = config.success_headline || 'Success! Thank you for your investment.';
+          if (el && el.dataset.managed !== 'polling') {
+            el.textContent = config.success_headline || 'Success! Thank you for your investment.';
+          }
         },
         mapToCapabilities: () => ({ recolorables: [], borderables: [] }),
         mapToEditPanelValues: () => new Map([])
@@ -244,7 +244,140 @@
       });
 
       lucide.createIcons();
+
+      // ── Payment state machine ────────────────────────────────────────────────
+      const params     = new URLSearchParams(window.location.search);
+      const session_id = params.get('session_id');
+
+      if (!session_id) {
+        renderPaymentState('error', { message: 'No session ID found. Please return to onboarding and try again.' });
+        return;
+      }
+
+      sessionStorage.setItem('vl_payment_state', 'processing');
+      renderPaymentState('processing');
+
+      // Begin polling
+      const POLL_INTERVAL_MS = 2000;
+      const POLL_TIMEOUT_MS  = 30000;
+      const pollStart = Date.now();
+      let pollTimer = null;
+
+      async function poll() {
+        try {
+          const res  = await fetch(`/forms/stripe/session-status?session_id=${encodeURIComponent(session_id)}`);
+          const data = await res.json();
+
+          if (!data.ok) {
+            clearInterval(pollTimer);
+            sessionStorage.setItem('vl_payment_state', 'error');
+            renderPaymentState('error', { message: 'Could not verify payment status. Please contact support.' });
+            return;
+          }
+
+          if (data.status === 'completed') {
+            clearInterval(pollTimer);
+            sessionStorage.setItem('vl_payment_state', 'completed');
+            renderPaymentState('completed', { plan: data.plan });
+            return;
+          }
+
+          if (data.status === 'error') {
+            clearInterval(pollTimer);
+            sessionStorage.setItem('vl_payment_state', 'error');
+            renderPaymentState('error', { message: 'Payment could not be confirmed. Please try again or contact support.' });
+            return;
+          }
+
+          // Check timeout
+          if (Date.now() - pollStart >= POLL_TIMEOUT_MS) {
+            clearInterval(pollTimer);
+            sessionStorage.setItem('vl_payment_state', 'error');
+            renderPaymentState('error', { timeout: true });
+          }
+        } catch (err) {
+          console.error('Polling error:', err);
+          // Don't stop polling on a transient network error — let it time out
+        }
+      }
+
+      pollTimer = setInterval(poll, POLL_INTERVAL_MS);
+      poll(); // Run immediately without waiting for first interval
     });
+
+    // ── renderPaymentState — update visible UI based on state ────────────────
+    function renderPaymentState(state, opts) {
+      const opts_      = opts || {};
+      const headline   = document.getElementById('success-headline');
+      const subtext    = headline ? headline.nextElementSibling : null;
+      const refSection = document.querySelector('.animate-fadeInUp.mb-10');
+      const actions    = document.querySelector('.flex.flex-col.sm\\:flex-row.gap-4');
+
+      // Spinner element (create once, reuse)
+      let spinnerEl = document.getElementById('payment-state-spinner');
+      if (!spinnerEl) {
+        spinnerEl = document.createElement('div');
+        spinnerEl.id = 'payment-state-spinner';
+        spinnerEl.className = 'flex flex-col items-center gap-4 py-6';
+        spinnerEl.innerHTML = `
+          <div class="w-14 h-14 rounded-full border-4 border-emerald-500/30 border-t-emerald-500 animate-spin"></div>
+          <p class="text-slate-300 font-medium text-lg">Confirming your plan…</p>
+          <p class="text-slate-500 text-sm">This may take a few seconds.</p>
+        `;
+        if (headline) headline.parentNode.insertBefore(spinnerEl, headline);
+      }
+
+      if (state === 'processing') {
+        spinnerEl.style.display = '';
+        if (headline)   headline.style.display   = 'none';
+        if (subtext)    subtext.style.display     = 'none';
+        if (refSection) refSection.style.display  = 'none';
+        if (actions)    actions.style.display     = 'none';
+      } else if (state === 'completed') {
+        spinnerEl.style.display = 'none';
+        // Restore standard success UI and fill ref from sessionStorage
+        if (headline) {
+          headline.style.display  = '';
+          headline.dataset.managed = 'polling';
+          headline.textContent    = opts_.plan === 'paid'
+            ? 'You\'re all set! Welcome to Premium.'
+            : 'Success! You\'re on the Free plan.';
+        }
+        if (subtext) subtext.style.display = '';
+        if (refSection) {
+          refSection.style.display = '';
+          const ref = sessionStorage.getItem('vlp_ref');
+          if (ref) document.getElementById('ref-display').textContent = ref;
+        }
+        if (actions) actions.style.display = '';
+        lucide.createIcons();
+      } else {
+        // error
+        spinnerEl.style.display = 'none';
+        if (headline) {
+          headline.style.display   = '';
+          headline.dataset.managed  = 'polling';
+          headline.textContent     = 'Payment could not be confirmed';
+          headline.className       = headline.className.replace('text-slate-100', 'text-red-400');
+        }
+        if (subtext) {
+          subtext.style.display = '';
+          if (opts_.timeout) {
+            subtext.innerHTML = 'Confirmation timed out. Your payment may still be processing — check your email or <a href="/onboarding.html" class="text-emerald-400 hover:underline">return to onboarding</a> to try again.';
+          } else {
+            subtext.textContent = opts_.message || 'Something went wrong. Please contact support or try again.';
+          }
+        }
+        if (refSection) refSection.style.display = 'none';
+        // Show only return home in actions
+        if (actions) {
+          actions.style.display = '';
+          const scheduleBtn = actions.querySelector('a[href*="cal.com"]');
+          if (scheduleBtn) scheduleBtn.style.display = 'none';
+        }
+        lucide.createIcons();
+      }
+    }
 
     function copyRef() {
       const ref = document.getElementById('ref-display').textContent;

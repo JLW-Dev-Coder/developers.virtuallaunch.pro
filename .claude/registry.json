@@ -12,7 +12,10 @@
       "public/reviews.html",
       "public/operator.html",
       "public/js/developers.js",
-      "public/clientReference.js"
+      "public/js/partials-loader.js",
+      "public/clientReference.js",
+      "public/partials/header.html",
+      "public/partials/footer.html"
     ],
     "stateStorage": "sessionStorage",
     "paymentViewSelector": "#payment-page",

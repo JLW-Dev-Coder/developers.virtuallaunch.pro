@@ -180,6 +180,18 @@ The coupon is never applied to the free plan.
   leaving `window.elementSdk` and `window.dataSdk` undefined; `.init()` on undefined
   crashed before the payment polling block ran
 
+### 2026-03-25 — Shared header/footer partials
+- New files:
+  - `public/partials/header.html` — standalone site header partial (sticky nav with logo, nav links, Operator Login + Get Started CTAs)
+  - `public/partials/footer.html` — standalone site footer partial (4-col grid; Product column populated dynamically by partials-loader.js)
+  - `public/js/partials-loader.js` — async IIFE; fetches both partials via `fetch('/partials/header.html')` and `fetch('/partials/footer.html')`; replaces `<div id="site-header">` and `<div id="site-footer">` placeholders using `outerHTML`; populates `#footer-product-links` with per-page links based on `window.location.pathname`
+- HTML pages updated (all in `public/`):
+  - `index.html`, `reviews.html`, `support.html`, `onboarding.html`, `success.html`, `available.html`, `operator.html`, `find-developers.html`
+  - Each: existing `<header>...</header>` → `<div id="site-header"></div>`; existing site `<footer>...</footer>` → `<div id="site-footer"></div>`; `<script src="/js/partials-loader.js" defer></script>` added before `</body>`
+  - `find-developers.html` edge case: contains a `<footer>` element used as a content section wrapper (timeline + script block closes at line 1582). Only the inner site footer (4-column grid at ~line 1178) was replaced; outer wrapper preserved.
+  - `operator.html`: custom operator header and minimal footer replaced with standard placeholders — site-wide nav now injected uniformly
+- Registry updates: `contracts/registry.json` — added `sharedAssets` array with 3 entries; `.claude/registry.json` — added 3 new files to `frontend.additionalFiles`
+
 ### 2026-03-25 — Domain rename: developer → developers
 - Changes:
   - Renamed all occurrences of `developer.virtuallaunch.pro` → `developers.virtuallaunch.pro`

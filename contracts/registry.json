@@ -65,5 +65,31 @@
       "reads": ["onboarding-records"],
       "version": 1
     }
+  ],
+  "sharedAssets": [
+    {
+      "id": "partial_header",
+      "category": "partial",
+      "path": "public/partials/header.html",
+      "description": "Shared site header partial — injected into all pages by partials-loader.js",
+      "usedOnPages": ["all"],
+      "status": "active"
+    },
+    {
+      "id": "partial_footer",
+      "category": "partial",
+      "path": "public/partials/footer.html",
+      "description": "Shared site footer partial — injected into all pages by partials-loader.js; Product links populated dynamically",
+      "usedOnPages": ["all"],
+      "status": "active"
+    },
+    {
+      "id": "js_partials_loader",
+      "category": "script",
+      "path": "public/js/partials-loader.js",
+      "description": "Fetches and injects header.html and footer.html partials; populates footer Product links per page",
+      "usedOnPages": ["all"],
+      "status": "active"
+    }
   ]
 }

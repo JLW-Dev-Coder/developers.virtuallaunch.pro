@@ -32,3 +32,66 @@
   "type": "service",
   "updated": 1774029724
 }
+{
+  "id": "promo_1TEw0U9ROeyeXOqees4MjGKl",
+  "object": "promotion_code",
+  "active": true,
+  "code": "TEST20260325",
+  "coupon": {
+    "id": "s7kWhDRg",
+    "object": "coupon",
+    "amount_off": null,
+    "cache_context_key": "acct_1T99pl9ROeyeXOqe",
+    "created": 1774462697,
+    "currency": null,
+    "duration": "forever",
+    "duration_in_months": null,
+    "livemode": true,
+    "max_redemptions": null,
+    "metadata": {},
+    "name": "INTERNAL",
+    "owning_merchant": "acct_1T99pl9ROeyeXOqe",
+    "owning_merchant_info": "acct_1T99pl9ROeyeXOqe",
+    "percent_off": 100,
+    "redeem_by": null,
+    "script": null,
+    "times_redeemed": 0,
+    "type": "percent_off",
+    "valid": true
+  },
+  "created": 1774462698,
+  "customer": null,
+  "customer_account": null,
+  "expires_at": null,
+  "livemode": true,
+  "max_redemptions": null,
+  "metadata": {},
+  "restrictions": {
+    "first_time_transaction": false,
+    "minimum_amount": null,
+    "minimum_amount_currency": null
+  },
+  "times_redeemed": 0
+}
+{
+  "id": "s7kWhDRg",
+  "object": "coupon",
+  "amount_off": null,
+  "cache_context_key": "acct_1T99pl9ROeyeXOqe",
+  "created": 1774462697,
+  "currency": null,
+  "duration": "forever",
+  "duration_in_months": null,
+  "livemode": true,
+  "max_redemptions": null,
+  "metadata": {},
+  "name": "INTERNAL",
+  "owning_merchant": "acct_1T99pl9ROeyeXOqe",
+  "owning_merchant_info": "acct_1T99pl9ROeyeXOqe",
+  "percent_off": 100,
+  "redeem_by": null,
+  "script": null,
+  "times_redeemed": 0,
+  "type": "percent_off",
+  "valid": true
+}

@@ -37,12 +37,25 @@ States: plan-selection → processing → completed | error
 
 ## Environment Variables
 
-| Key                   | Required | Location              | Purpose                        |
-|-----------------------|----------|-----------------------|--------------------------------|
-| STRIPE_SECRET_KEY     | yes      | Cloudflare dashboard  | Authenticate Stripe API calls  |
-| STRIPE_WEBHOOK_SECRET | yes      | Cloudflare dashboard  | Verify webhook signatures      |
-| STRIPE_PRICE_FREE     | yes      | Cloudflare dashboard  | Free plan price ID             |
-| STRIPE_PRICE_PAID     | yes      | Cloudflare dashboard  | $2.99 recurring price ID       |
+| Key                        | Required | Location              | Purpose                                  |
+|----------------------------|----------|-----------------------|------------------------------------------|
+| STRIPE_SECRET_KEY          | yes      | Cloudflare dashboard  | Authenticate Stripe API calls            |
+| STRIPE_WEBHOOK_SECRET      | yes      | Cloudflare dashboard  | Verify webhook signatures                |
+| STRIPE_PRICE_FREE          | yes      | Cloudflare dashboard  | Free plan price ID                       |
+| STRIPE_PRICE_PAID          | yes      | Cloudflare dashboard  | $2.99 recurring price ID                 |
+| STRIPE_INTERNAL_COUPON_ID  | no       | Cloudflare dashboard  | 100% off coupon for internal testing     |
+
+## Internal Testing
+
+To test the paid plan at $0 cost using the internal 100% off coupon:
+1. Open the browser DevTools console on onboarding.html
+2. Run: `sessionStorage.setItem('vlp_internal', 'true')`
+3. Click the paid plan card — the Checkout Session will include the 100% off coupon
+
+The `vlp_internal` flag is read from sessionStorage only. It is never derived from URL params.
+The coupon ID is never exposed to the client — it is read server-side from `STRIPE_INTERNAL_COUPON_ID`.
+If `STRIPE_INTERNAL_COUPON_ID` is not set in the environment, the flag is silently ignored.
+The coupon is never applied to the free plan.
 
 ## Self-Check Rules (run before every change)
 1. Never modify webhook endpoint, secret, or event list
@@ -62,6 +75,23 @@ States: plan-selection → processing → completed | error
   contracts/onboarding.json
 - Nulls remaining at that time: Stripe webhook handler, session-status endpoint,
   Stripe SDK version, vl_payment_state sessionStorage key
+
+### 2026-03-25 — Free plan fix + internal coupon support
+- Changes:
+  - Fixed `functions/forms/stripe/create-session.js`:
+    - Removed `payment_method_collection` from free plan (mode: "payment") session config —
+      Stripe does not allow this field on payment-mode sessions; was causing 500 in production
+    - Improved Stripe catch block: logs `error.type`, `error.message`, `error.code`;
+      returns `{ ok: false, error: "stripe_error", message: error.message }` to client
+    - Added optional `internal` boolean field in request body; when `true` and
+      `env.STRIPE_INTERNAL_COUPON_ID` is set, applies coupon to paid plan session only
+  - Updated `public/onboarding.html` — `selectPlan` reads `vlp_internal` from sessionStorage;
+    if `"true"`, includes `internal: true` in POST body to create-session
+  - Updated `wrangler.toml` — added `STRIPE_INTERNAL_COUPON_ID` placeholder comment
+  - Updated `.claude/registry.json` — added `STRIPE_INTERNAL_COUPON_ID` to env array
+  - Updated `.claude/CLAUDE.md` — added env var row + "Internal Testing" section
+- Root cause resolved: Stripe error "You can only set payment_method_collection if there are
+  recurring prices" — `payment_method_collection: "if_required"` was set on `mode: "payment"`
 
 ### 2026-03-25 — Stripe Checkout + Webhook State Machine
 - Changes:

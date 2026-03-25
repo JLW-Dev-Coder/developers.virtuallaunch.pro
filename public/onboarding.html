@@ -862,15 +862,14 @@
         sessionStorage.setItem('vl_payment_state', 'processing');
 
         try {
+          const isInternal = sessionStorage.getItem('vlp_internal') === 'true';
+          const sessionBody = { vlp_ref: _currentRefNumber, plan, email, full_name };
+          if (isInternal) sessionBody.internal = true;
+
           const res = await fetch('/forms/stripe/create-session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              vlp_ref:   _currentRefNumber,
-              plan,
-              email,
-              full_name,
-            })
+            body: JSON.stringify(sessionBody)
           });
           const data = await res.json();
 

@@ -14,7 +14,7 @@ export async function onRequestPost({ request, env }) {
     return jsonError(400, 'Invalid JSON body');
   }
 
-  const { vlp_ref, plan, email, full_name } = body;
+  const { vlp_ref, plan, email, full_name, internal = false } = body;
 
   // Validate required fields
   if (!vlp_ref || !plan || !email || !full_name) {
@@ -44,20 +44,29 @@ export async function onRequestPost({ request, env }) {
   if (plan === 'free') {
     sessionParams.mode = 'payment';
     sessionParams.line_items = [{ price: env.STRIPE_PRICE_FREE, quantity: 1 }];
-    sessionParams.payment_method_collection = 'if_required';
   } else {
     sessionParams.mode = 'subscription';
     sessionParams.line_items = [{ price: env.STRIPE_PRICE_PAID, quantity: 1 }];
     sessionParams.payment_method_collection = 'always';
     sessionParams.subscription_data = { metadata: { vlp_ref, plan } };
+    if (internal && env.STRIPE_INTERNAL_COUPON_ID) {
+      sessionParams.discounts = [{ coupon: env.STRIPE_INTERNAL_COUPON_ID }];
+    }
   }
 
   let session;
   try {
     session = await stripe.checkout.sessions.create(sessionParams);
   } catch (err) {
-    console.error('Stripe session creation failed:', err.message);
-    return jsonError(500, 'Failed to create Stripe Checkout session');
+    console.error('Stripe session creation failed:', {
+      type: err.type,
+      message: err.message,
+      code: err.code,
+    });
+    return Response.json(
+      { ok: false, error: 'stripe_error', message: err.message },
+      { status: 500 }
+    );
   }
 
   return Response.json({ ok: true, url: session.url });

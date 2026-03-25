@@ -126,7 +126,13 @@
     "STRIPE_SECRET_KEY",
     "STRIPE_WEBHOOK_SECRET",
     "STRIPE_PRICE_FREE",
-    "STRIPE_PRICE_PAID"
+    "STRIPE_PRICE_PAID",
+    {
+      "key": "STRIPE_INTERNAL_COUPON_ID",
+      "purpose": "100% off coupon ID for internal paid plan testing",
+      "required": false,
+      "location": "Cloudflare dashboard"
+    }
   ],
   "dependencies": {
     "stripe": "20.4.1",

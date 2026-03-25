@@ -35,12 +35,10 @@ Support page → Worker lookup → status returned
     registry.json  
     support.json 
   /public
-    clientReference.js
     index.html
     onboarding.html
     success.html
     support.html
-    clientReference.js
   /worker
     index.js
   README

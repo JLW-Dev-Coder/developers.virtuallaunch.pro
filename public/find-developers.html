@@ -42,6 +42,13 @@
       z-index: 1;
     }
 
+    /* Footer must not carry z-index:1 — it forces GPU compositing which
+       disables subpixel antialiasing and makes footer text appear thinner/lighter.
+       Override both the `footer` and `#app > *` selectors above. */
+    footer, #app > footer {
+      z-index: auto;
+    }
+
     .bg-blob {
       position: absolute;
       border-radius: 9999px;

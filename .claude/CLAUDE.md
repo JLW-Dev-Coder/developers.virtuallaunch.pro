@@ -215,6 +215,25 @@ The coupon is never applied to the free plan.
   index.html — no change needed to body structure.
 - partials/footer.html and partials-loader.js were NOT modified.
 
+### 2026-03-25 — Fix footer visual inconsistency on find-developers.html
+- Files modified: `public/find-developers.html`
+- Same root causes as the support.html fix (same CSS rule pattern), but different page structure:
+  - find-developers.html has NO `<main>` element and NO `overflow-auto`, so Fix 1 from
+    support.html (removing `overflow-auto` from `<main>`) does not apply here.
+  - The outer `<footer class="border-t border-slate-800/50 bg-slate-950">` at line 1075 is
+    a direct child of `#app` and acts as the "How Your Project Moves Forward" timeline wrapper.
+    The `#site-footer` placeholder is nested inside this outer footer; after injection the
+    site footer partial becomes a nested `<footer>` inside `<footer>`.
+- Issue — Thinner/lighter footer text (and border rendering affected by compositing):
+  - Root cause: Same as support.html — CSS rule `#app, #app > *, main, main > section, header, footer
+    { position: relative; z-index: 1; }` applies `z-index: 1` to all `footer` elements (outer
+    and injected inner) via both the `footer` and `#app > *` selectors, forcing GPU compositing
+    and disabling subpixel antialiasing on text.
+  - Fix: Added scoped CSS override `footer, #app > footer { z-index: auto; }` after the existing
+    rule. Covers both the outer footer (`#app > footer`, specificity `(1,0,1)`) and the nested
+    injected footer (`footer`, specificity `(0,0,1)` — wins by source order).
+- partials/footer.html and partials-loader.js were NOT modified.
+
 ### 2026-03-25 — Domain rename: developer → developers
 - Changes:
   - Renamed all occurrences of `developer.virtuallaunch.pro` → `developers.virtuallaunch.pro`

@@ -30,7 +30,8 @@
   ];
 
   // Fix 2: fields handled as explicit single-select dropdowns — exclude from schema multi-select loop
-  const EXPLICIT_SELECT_FIELDS = ['availability', 'contract_type', 'country', 'timezone'];
+  // Task 6: availability filter removed
+  const EXPLICIT_SELECT_FIELDS = ['contract_type', 'country', 'timezone'];
 
   // ── Bootstrap ─────────────────────────────────────────────────────────────────
   async function init() {
@@ -60,6 +61,7 @@
   }
 
   // ── Filter UI ─────────────────────────────────────────────────────────────────
+  // Task 7: filter UX redesign
   function buildFilterUI() {
     const sidebar = document.getElementById('filter-sidebar');
     if (!sidebar) return;
@@ -79,22 +81,9 @@
                  focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30">
       </div>`;
 
-    // ── Section: Availability / URLs ──────────────────────────────────────────────
-    // Fix 2: group availability select and URL toggle radios together
-    html += `<div class="border-t border-slate-700/40 pt-5 mb-4"><p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Availability / URLs</p></div>`;
-
-    // Fix 2: availability single-select, dynamically populated from dataset
-    const availOpts = distinct('availability');
-    html += `
-      <div class="mb-5">
-        <label class="block text-xs font-semibold text-slate-300 mb-2">Availability</label>
-        <select id="filter-availability"
-          class="w-full border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 bg-slate-900 transition
-                 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30">
-          <option value="">Any</option>
-          ${availOpts.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('')}
-        </select>
-      </div>`;
+    // ── Section: Profile Links ────────────────────────────────────────────────────
+    // Task 6: availability filter removed — section renamed from "Availability / URLs" to "Profile Links"
+    html += `<div class="border-t border-slate-700/40 pt-5 mb-4"><p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Profile Links</p></div>`;
 
     // Fix 2: URL availability toggles — has_linkedin, has_portfolio, has_video
     for (const f of URL_FILTER_FIELDS) {
@@ -112,18 +101,18 @@
     }
 
     // ── Section: Skills ───────────────────────────────────────────────────────────
-    // Fix 2: all 9 skill radios with options Any / 1+ / 3+ / 5+ / 7+ / 9+, in 2-column grid
+    // Task 7: filter UX redesign — single-column layout, pill-style radio buttons
     html += `<div class="border-t border-slate-700/40 pt-5 mb-4"><p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Skills (min. rating)</p></div>`;
-    html += `<div class="grid grid-cols-2 gap-x-4 mb-2">`;
+    html += `<div class="mb-2">`;
     for (const s of SKILL_FIELDS) {
       html += `
         <div class="mb-4">
           <label class="block text-xs font-semibold text-slate-300 mb-1.5">${esc(s.label)}</label>
           <div class="flex flex-wrap gap-1.5">
             ${[['any','Any'],['1','1+'],['3','3+'],['5','5+'],['7','7+'],['9','9+']].map(([v, lbl], i) => `
-              <label class="flex items-center gap-1 cursor-pointer text-xs text-slate-400 hover:text-slate-200">
-                <input type="radio" name="filter-skill-${s.key}" value="${v}" ${i === 0 ? 'checked' : ''}
-                  class="accent-emerald-500"> ${esc(lbl)}
+              <label class="pill-radio cursor-pointer">
+                <input type="radio" name="filter-skill-${s.key}" value="${v}" ${i === 0 ? 'checked' : ''}>
+                <span class="pill-label">${esc(lbl)}</span>
               </label>`).join('')}
           </div>
         </div>`;
@@ -207,7 +196,7 @@
     document.getElementById('filter-rate-min').addEventListener('input', debouncedFilter);
     document.getElementById('filter-rate-max').addEventListener('input', debouncedFilter);
 
-    // Fix 2: bind explicit single-select dropdowns (availability + profile details)
+    // Fix 2: bind explicit single-select dropdowns (profile details)
     [...EXPLICIT_SELECT_FIELDS].forEach(field => {
       const el = document.getElementById(`filter-${field}`);
       if (el) el.addEventListener('change', debouncedFilter);
@@ -253,7 +242,41 @@
         if (el) el.checked = true;
       }
       renderCards(allDevelopers);
+      // Task 7: reset mobile badge
+      const badge = document.getElementById('filter-count-badge');
+      if (badge) badge.textContent = '';
     });
+  }
+
+  // ── Active Filter Count ────────────────────────────────────────────────────────
+  // Task 7: filter UX redesign
+  function countActiveFilters() {
+    let count = 0;
+    // keyword
+    if ((document.getElementById('filter-keyword')?.value || '').trim()) count++;
+    // rate
+    if ((document.getElementById('filter-rate-min')?.value || '').trim()) count++;
+    if ((document.getElementById('filter-rate-max')?.value || '').trim()) count++;
+    // explicit selects (contract_type, country, timezone)
+    ['contract_type', 'country', 'timezone'].forEach(field => {
+      if (document.getElementById(`filter-${field}`)?.value) count++;
+    });
+    // URL filters
+    for (const f of URL_FILTER_FIELDS) {
+      const checked = document.querySelector(`input[name="filter-url-${f.name}"]:checked`);
+      if (checked && checked.value !== 'any') count++;
+    }
+    // Skill filters
+    for (const s of SKILL_FIELDS) {
+      const checked = document.querySelector(`input[name="filter-skill-${s.key}"]:checked`);
+      if (checked && checked.value !== 'any') count++;
+    }
+    // schema multi-select fields
+    for (const field of filterableFields) {
+      const el = document.getElementById(`filter-${field.name}`);
+      if (el && Array.from(el.options).some(o => o.selected)) count++;
+    }
+    return count;
   }
 
   // ── Apply Filters ──────────────────────────────────────────────────────────────
@@ -328,6 +351,12 @@
     }
 
     renderCards(results);
+    // Task 7: update mobile filter badge
+    const badge = document.getElementById('filter-count-badge');
+    if (badge) {
+      const n = countActiveFilters();
+      badge.textContent = n > 0 ? ` (${n})` : '';
+    }
   }
 
   // ── Render Cards ──────────────────────────────────────────────────────────────

@@ -64,8 +64,13 @@
       <a href="/reviews.html" class="text-sm font-medium text-slate-300 hover:text-emerald-400 transition">Reviews</a>
       <a href="/support.html" class="text-sm font-medium text-slate-300 hover:text-emerald-400 transition">Support</a>
       <a href="/find-developers.html" class="text-sm font-medium text-slate-300 hover:text-emerald-400 transition">Find Developers</a>
-     </nav><!-- CTA Button --> 
-     <a href="/onboarding.html"> <button class="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-semibold text-sm rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg shadow-emerald-500/25 active:scale-95"> Get Started </button> </a>
+     </nav>
+     <!-- Task 4: login button -->
+     <div class="flex items-center gap-3">
+      <a href="/operator.html" class="px-4 py-2.5 border border-slate-700 hover:border-emerald-500/50 text-slate-300 hover:text-slate-100 font-medium text-sm rounded-lg transition-all duration-200">Operator Login</a>
+      <!-- CTA Button -->
+      <a href="/onboarding.html"> <button class="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-semibold text-sm rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg shadow-emerald-500/25 active:scale-95"> Get Started </button> </a>
+     </div>
     </div>
    </header>
 
@@ -294,9 +299,8 @@
     </main>
    </div>
 
-   <!-- PAYMENT PAGE -->
+   <!-- PAYMENT PAGE — Tasks 1, 2, 3 -->
    <div id="payment-page" class="page hidden min-h-full flex flex-col">
-    <!-- Task 1a: wrap in max-w-7xl px-6 container to align with header menu icon -->
     <div class="max-w-7xl mx-auto w-full px-6 pt-8">
      <button id="back-payment-btn" class="flex items-center gap-2 text-emerald-500 hover:text-emerald-400 font-medium text-sm transition">
       <i data-lucide="arrow-left" style="width:16px;height:16px;"></i> <span>Back</span>
@@ -308,48 +312,103 @@
        <h1 id="payment-headline" class="text-3xl md:text-5xl font-bold text-slate-100 tracking-tight mb-4">Choose Your Path Forward</h1>
        <p class="text-lg text-slate-400 max-w-2xl mx-auto">Get matched with U.S. clients faster with professional support, or manage it yourself.</p>
       </div>
+
+      <!-- Task 2: upgrade banner (shown when plan=free) -->
+      <div id="upgrade-banner" class="hidden mb-6 max-w-3xl mx-auto px-5 py-3 rounded-xl border border-emerald-500/40 bg-emerald-950/20 text-sm text-emerald-300 flex items-center gap-2">
+       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+       <span>You're on the Free plan — upgrade for full job matching support.</span>
+      </div>
+
       <div class="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-       <!-- Free Option -->
-       <div class="group relative rounded-2xl border border-slate-700/50 bg-slate-800/30 p-8 hover:border-slate-600 hover:shadow-lg hover:shadow-emerald-500/5 transition-all duration-300 transform hover:scale-105">
+
+       <!-- Task 3: Free Plan — benefits from operator.html features -->
+       <!-- Task 2: plan card with id for active-state styling -->
+       <div id="plan-card-free" class="group relative rounded-2xl border border-slate-700/50 bg-slate-800/30 p-8 hover:border-slate-600 hover:shadow-lg hover:shadow-emerald-500/5 transition-all duration-300 transform hover:scale-105">
         <div class="relative z-10">
-         <div class="flex items-start justify-between mb-6">
+         <div class="flex items-start justify-between mb-4">
           <div>
-           <h2 class="text-2xl font-bold text-slate-100 mb-2">Virtual Launch Pro</h2>
-           <p class="text-slate-400 text-sm">Free – Self-Service Matching</p>
+           <h2 class="text-2xl font-bold text-slate-100 mb-1">Free</h2>
+           <p class="text-slate-400 text-sm">Self-service — no monthly fee</p>
           </div>
+          <!-- Task 2: active indicator, hidden by default -->
+          <span id="free-active-badge" class="hidden text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-700 text-slate-300 border border-slate-600">Current Plan</span>
          </div>
-         <div class="text-slate-400 text-sm leading-relaxed mb-8">Access to the developer network and client database. Manage your own outreach and matching. Direct support via email and community.</div>
+         <!-- Task 3: free plan benefits from operator.html — profile visibility, job posts, notifications -->
          <ul class="space-y-3 mb-8">
-          <li class="flex items-center gap-3 text-sm text-slate-300"><i data-lucide="check" style="width:18px;height:18px;color:#10b981;"></i> <span>Full profile access &amp; visibility</span></li>
-          <li class="flex items-center gap-3 text-sm text-slate-300"><i data-lucide="check" style="width:18px;height:18px;color:#10b981;"></i> <span>Browse client project postings</span></li>
-          <li class="flex items-center gap-3 text-sm text-slate-300"><i data-lucide="check" style="width:18px;height:18px;color:#10b981;"></i> <span>Direct messaging with clients</span></li>
-          <li class="flex items-center gap-3 text-sm text-slate-300"><i data-lucide="check" style="width:18px;height:18px;color:#10b981;"></i> <span>Community support &amp; resources</span></li>
+          <li class="flex items-center gap-3 text-sm text-slate-300"><i data-lucide="check" style="width:18px;height:18px;color:#10b981;"></i> <span>Your profile listed in the public developer directory</span></li>
+          <li class="flex items-center gap-3 text-sm text-slate-300"><i data-lucide="check" style="width:18px;height:18px;color:#10b981;"></i> <span>View and respond to open job posts</span></li>
+          <li class="flex items-center gap-3 text-sm text-slate-300"><i data-lucide="check" style="width:18px;height:18px;color:#10b981;"></i> <span>Email notifications on your chosen schedule</span></li>
+          <li class="flex items-center gap-3 text-sm text-slate-300"><i data-lucide="check" style="width:18px;height:18px;color:#10b981;"></i> <span>Direct contact info shared with interested clients</span></li>
          </ul>
-         <a href="https://buy.stripe.com/5kQ9ANa7H4cwb1xaO673G01?client_reference_id=Virtual-Launch-Pro-Job-Match-Intro-Service-FREE" target="_blank" rel="noopener noreferrer" class="block w-full text-center px-6 py-3.5 border border-slate-700 hover:border-emerald-500/50 bg-slate-900/40 hover:bg-slate-800/60 text-slate-100 font-semibold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-emerald-500/10 transform hover:scale-105 active:scale-95">Get Started Free</a>
+         <!-- Task 2: CTA changes based on plan state -->
+         <button id="free-cta-btn" onclick="selectPlan('free')"
+          class="block w-full text-center px-6 py-3.5 border border-slate-700 hover:border-emerald-500/50 bg-slate-900/40 hover:bg-slate-800/60 text-slate-100 font-semibold rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-emerald-500/10 active:scale-95">
+          Get Started Free
+         </button>
         </div>
        </div>
-       <!-- Paid Option (Featured) -->
-       <div class="group relative rounded-2xl border-2 border-emerald-500/50 bg-gradient-to-br from-slate-800/60 to-emerald-950/20 p-8 hover:border-emerald-500 hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-300 transform hover:scale-105 md:scale-105">
-        <div class="absolute -top-3 left-1/2 -translate-x-1/2 inline-block px-3 py-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-xs font-bold rounded-full shadow-lg shadow-emerald-500/30">RECOMMENDED</div>
+
+       <!-- Task 3: Paid Plan — benefits from operator.html features -->
+       <div id="plan-card-paid" class="group relative rounded-2xl border-2 border-emerald-500/50 bg-gradient-to-br from-slate-800/60 to-emerald-950/20 p-8 hover:border-emerald-500 hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-300 transform hover:scale-105 md:scale-105">
+        <div id="paid-recommended-badge" class="absolute -top-3 left-1/2 -translate-x-1/2 inline-block px-3 py-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-xs font-bold rounded-full shadow-lg shadow-emerald-500/30">RECOMMENDED</div>
+        <!-- Task 2: active indicator, hidden by default -->
+        <div id="paid-active-badge" class="hidden absolute -top-3 left-1/2 -translate-x-1/2 inline-block px-3 py-1 bg-emerald-600 text-white text-xs font-bold rounded-full shadow-lg shadow-emerald-500/30">✓ Active Plan</div>
         <div class="relative z-10">
-         <div class="flex items-start justify-between mb-6">
+         <div class="flex items-start justify-between mb-4">
           <div>
-           <h2 class="text-2xl font-bold text-slate-100 mb-2">Virtual Launch Pro</h2>
-           <p class="text-emerald-400 font-semibold text-sm">$2.99 – Job Match Intro Service</p>
+           <h2 class="text-2xl font-bold text-slate-100 mb-1">Job Match Intro</h2>
+           <p class="text-emerald-400 font-semibold text-sm">$2.99 / month</p>
           </div>
          </div>
-         <div class="text-slate-300 text-sm leading-relaxed mb-8">Professional vetting and curated client matching. Expert support every step of the way. Priority access to high-value projects.</div>
+         <!-- Task 3: paid plan benefits from operator.html — post submissions, profile review, bulk email, operator matching -->
          <ul class="space-y-3 mb-8">
-          <li class="flex items-center gap-3 text-sm text-slate-100"><i data-lucide="check" style="width:18px;height:18px;color:#10b981;"></i> <span>Everything in Free, plus:</span></li>
-          <li class="flex items-center gap-3 text-sm text-slate-100"><i data-lucide="check" style="width:18px;height:18px;color:#10b981;"></i> <span>Personal profile review &amp; optimization</span></li>
-          <li class="flex items-center gap-3 text-sm text-slate-100"><i data-lucide="check" style="width:18px;height:18px;color:#10b981;"></i> <span>Curated client introductions (3–5 per month)</span></li>
-          <li class="flex items-center gap-3 text-sm text-slate-100"><i data-lucide="check" style="width:18px;height:18px;color:#10b981;"></i> <span>1-on-1 kickoff consultation</span></li>
-          <li class="flex items-center gap-3 text-sm text-slate-100"><i data-lucide="check" style="width:18px;height:18px;color:#10b981;"></i> <span>Priority email &amp; Slack support</span></li>
+          <li class="flex items-center gap-3 text-sm text-slate-100"><i data-lucide="check" style="width:18px;height:18px;color:#10b981;"></i> <span>Everything in Free</span></li>
+          <li class="flex items-center gap-3 text-sm text-slate-100"><i data-lucide="check" style="width:18px;height:18px;color:#10b981;"></i> <span>Operator submits job posts directly to your profile</span></li>
+          <li class="flex items-center gap-3 text-sm text-slate-100"><i data-lucide="check" style="width:18px;height:18px;color:#10b981;"></i> <span>Personal profile review and publish management</span></li>
+          <li class="flex items-center gap-3 text-sm text-slate-100"><i data-lucide="check" style="width:18px;height:18px;color:#10b981;"></i> <span>Bulk email outreach when opportunities match your skills</span></li>
          </ul>
-         <a href="https://buy.stripe.com/cNi5kx2FfaAU8TpaO673G00?client_reference_id=Virtual-Launch-Pro-Job-Match-Intro-Service-299" target="_blank" rel="noopener noreferrer" class="block w-full text-center px-6 py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transform hover:scale-105 active:scale-95">Unlock Premium Matching</a>
+         <!-- Task 2: CTA changes based on plan state -->
+         <button id="paid-cta-btn" onclick="selectPlan('paid')"
+          class="block w-full text-center px-6 py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 active:scale-95">
+          Unlock Premium Matching
+         </button>
+         <!-- Task 2: downgrade link, hidden by default -->
+         <div id="downgrade-link" class="hidden mt-3 text-center">
+          <button onclick="selectPlan('free')" class="text-xs text-slate-500 hover:text-slate-400 transition underline">Downgrade to Free</button>
+         </div>
+        </div>
+       </div>
+
+      </div><!-- /grid -->
+
+      <!-- Task 1: Delete Account button — centered below plans -->
+      <div class="max-w-3xl mx-auto mt-10 flex flex-col items-center gap-3">
+       <!-- Default state -->
+       <div id="delete-account-default">
+        <button id="delete-account-btn" onclick="showDeleteConfirm()"
+         class="px-6 py-2.5 border border-red-800 text-red-400 hover:bg-red-900/20 font-medium text-sm rounded-lg transition-all duration-200">
+         Delete Account / Profile
+        </button>
+       </div>
+       <!-- Task 1: inline confirmation state (no window.confirm) -->
+       <div id="delete-account-confirm" class="hidden">
+        <div class="rounded-xl border border-red-800/60 bg-red-950/20 px-6 py-5 text-center max-w-sm">
+         <p class="text-sm text-slate-300 mb-4">This will archive your profile. You will be signed out and your data will not be permanently deleted.</p>
+         <div class="flex items-center justify-center gap-3">
+          <button id="delete-confirm-yes" onclick="executeDelete()"
+           class="px-5 py-2.5 border border-red-700 bg-red-900/30 hover:bg-red-900/60 text-red-300 font-medium text-sm rounded-lg transition-all duration-200">
+           Yes, delete my profile
+          </button>
+          <button onclick="cancelDeleteConfirm()"
+           class="px-5 py-2.5 border border-slate-700 hover:border-slate-600 text-slate-300 hover:text-slate-100 font-medium text-sm rounded-lg transition-all duration-200">
+           Cancel
+          </button>
+         </div>
+         <p id="delete-error" class="hidden mt-3 text-xs text-red-400"></p>
         </div>
        </div>
       </div>
+
      </div>
     </main>
    </div>
@@ -410,6 +469,10 @@
   </footer>
 
   <script>
+    // Task 1+2: track current ref number and loaded plan when navigating to payment page
+    let _currentRefNumber = null;
+    let _loadedPlan = null;
+
     document.addEventListener('DOMContentLoaded', async function() {
       lucide.createIcons();
 
@@ -463,6 +526,8 @@
       const loadSpinner = document.getElementById('load-spinner');
 
       function prefillForm(data) {
+        // Task 2: capture plan from loaded profile
+        _loadedPlan = data.plan || null;
         const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
         const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = !!val; };
         set('f-name',          data.full_name);
@@ -520,6 +585,8 @@
 
             if (data.ok && data.data) {
               prefillForm(data.data);
+              // Task 1+2: store ref so delete/plan functions work after load
+              _currentRefNumber = ref;
               loadResult.textContent = 'Profile loaded. Make your changes and submit to update.';
               loadResult.className = 'mt-3 text-sm text-emerald-400';
             } else {
@@ -608,7 +675,9 @@
             spinner.classList.add('hidden');
 
             if (result.ok) {
-              showPage('payment-page');
+              // Task 1+2: store ref for payment page use; prefer plan from response, fall back to loaded plan
+              _currentRefNumber = refNum;
+              showPaymentPage(result.plan || _loadedPlan || null);
             } else if (result.error === 'not_found') {
               showError('Reference number not found. Please check and try again.');
             } else {
@@ -665,8 +734,10 @@
                 document.getElementById('ref-number').textContent = payload.eventId;
                 refDisplay.classList.remove('hidden');
 
+                // Task 1+2: store the new ref for payment page use
+                _currentRefNumber = payload.eventId;
                 form.reset();
-                showPage('payment-page');
+                showPaymentPage(null);
               }
             } else {
               showError('Submission failed: ' + (result.error || 'unknown_error') + '. Please try again.');
@@ -681,6 +752,149 @@
           }
         }
       });
+
+      // ── Task 2: plan state on payment page ────────────────────────────────────
+      function showPaymentPage(plan) {
+        setPlanState(plan);
+        showPage('payment-page');
+        lucide.createIcons();
+      }
+
+      // Task 2: setPlanState — update plan card UI based on current plan value
+      function setPlanState(plan) {
+        const freeBadge      = document.getElementById('free-active-badge');
+        const freeCta        = document.getElementById('free-cta-btn');
+        const paidBadge      = document.getElementById('paid-active-badge');
+        const paidRecBadge   = document.getElementById('paid-recommended-badge');
+        const paidCta        = document.getElementById('paid-cta-btn');
+        const upgradeBanner  = document.getElementById('upgrade-banner');
+        const downgradeLink  = document.getElementById('downgrade-link');
+        const freeCard       = document.getElementById('plan-card-free');
+        const paidCard       = document.getElementById('plan-card-paid');
+
+        // Reset all state first
+        freeBadge.classList.add('hidden');
+        paidBadge.classList.add('hidden');
+        paidRecBadge.classList.remove('hidden');
+        upgradeBanner.classList.add('hidden');
+        downgradeLink.classList.add('hidden');
+        freeCard.classList.remove('ring-2', 'ring-emerald-500/60');
+        paidCard.classList.remove('ring-2', 'ring-emerald-500/60');
+
+        if (plan === 'free') {
+          freeBadge.classList.remove('hidden');
+          freeCard.classList.add('ring-2', 'ring-emerald-500/60');
+          freeCta.textContent = 'Current Plan';
+          freeCta.disabled = true;
+          freeCta.classList.add('opacity-60', 'cursor-not-allowed');
+          paidCta.textContent = 'Upgrade to Premium';
+          paidCta.disabled = false;
+          paidCta.classList.remove('opacity-60', 'cursor-not-allowed');
+          upgradeBanner.classList.remove('hidden');
+        } else if (plan === 'paid') {
+          paidBadge.classList.remove('hidden');
+          paidRecBadge.classList.add('hidden');
+          paidCard.classList.add('ring-2', 'ring-emerald-500/60');
+          paidCta.textContent = 'Current Plan';
+          paidCta.disabled = true;
+          paidCta.classList.add('opacity-60', 'cursor-not-allowed');
+          freeCta.textContent = 'Get Started Free';
+          freeCta.disabled = false;
+          freeCta.classList.remove('opacity-60', 'cursor-not-allowed');
+          downgradeLink.classList.remove('hidden');
+        } else {
+          // null / not set — recommended state
+          freeCta.textContent = 'Get Started Free';
+          freeCta.disabled = false;
+          freeCta.classList.remove('opacity-60', 'cursor-not-allowed');
+          paidCta.textContent = 'Unlock Premium Matching';
+          paidCta.disabled = false;
+          paidCta.classList.remove('opacity-60', 'cursor-not-allowed');
+        }
+      }
+
+      // Task 2: selectPlan — save plan to profile then update UI
+      async function selectPlan(plan) {
+        if (!_currentRefNumber) {
+          // No ref — just update UI, plan saves when user submits form
+          setPlanState(plan);
+          return;
+        }
+        try {
+          const res = await fetch('https://developers.virtuallaunch.pro/forms/onboarding', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ref_number: _currentRefNumber, plan, confirmation: true })
+          });
+          const data = await res.json();
+          if (data.ok) {
+            setPlanState(plan);
+          }
+        } catch (err) {
+          console.error('Plan save failed:', err);
+        }
+      }
+
+      // Task 1: delete account UI helpers
+      function showDeleteConfirm() {
+        document.getElementById('delete-account-default').classList.add('hidden');
+        document.getElementById('delete-account-confirm').classList.remove('hidden');
+        document.getElementById('delete-error').classList.add('hidden');
+      }
+
+      function cancelDeleteConfirm() {
+        document.getElementById('delete-account-confirm').classList.add('hidden');
+        document.getElementById('delete-account-default').classList.remove('hidden');
+      }
+
+      // Task 1: executeDelete — soft-delete via PATCH archived:true
+      async function executeDelete() {
+        if (!_currentRefNumber) {
+          document.getElementById('delete-error').textContent = 'No profile reference found. Please load your profile first.';
+          document.getElementById('delete-error').classList.remove('hidden');
+          return;
+        }
+        const yesBtn = document.getElementById('delete-confirm-yes');
+        yesBtn.disabled = true;
+        yesBtn.textContent = 'Deleting…';
+
+        try {
+          const res = await fetch('https://developers.virtuallaunch.pro/forms/onboarding', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ref_number:  _currentRefNumber,
+              archived:    true,
+              archived_at: new Date().toISOString(),
+              confirmation: true
+            })
+          });
+          const data = await res.json();
+
+          if (data.ok) {
+            // Task 1: clear session state and redirect to home
+            _currentRefNumber = null;
+            window.location.href = '/index.html';
+          } else {
+            document.getElementById('delete-error').textContent = 'Deletion failed: ' + (data.error || 'unknown_error');
+            document.getElementById('delete-error').classList.remove('hidden');
+            yesBtn.disabled = false;
+            yesBtn.textContent = 'Yes, delete my profile';
+          }
+        } catch (err) {
+          document.getElementById('delete-error').textContent = 'Network error. Please try again.';
+          document.getElementById('delete-error').classList.remove('hidden');
+          yesBtn.disabled = false;
+          yesBtn.textContent = 'Yes, delete my profile';
+        }
+      }
+
+      // Expose to global scope (called from onclick attributes)
+      window.selectPlan = selectPlan;
+      window.showDeleteConfirm = showDeleteConfirm;
+      window.cancelDeleteConfirm = cancelDeleteConfirm;
+      window.executeDelete = executeDelete;
+
     });
   </script>
  </body>

@@ -124,7 +124,8 @@ export async function onRequestPatch({ request, env }) {
 
     await putRecord(env, recordKey, updated);
 
-    return json({ ok: true, eventId: ref_number, status: updated.status || 'updated' }, 200, CORS);
+    // Task 2: include plan in response so frontend can call setPlanState
+    return json({ ok: true, eventId: ref_number, status: updated.status || 'updated', plan: updated.plan || null }, 200, CORS);
 
   } catch (err) {
     console.error(err);
@@ -179,7 +180,9 @@ export async function onRequestGet({ request, env }) {
       skill_docker:         record.skill_docker,
       skill_mongodb:        record.skill_mongodb,
       skill_postgresql:     record.skill_postgresql,
-      skill_other_skills:   record.skill_other_skills  || ''
+      skill_other_skills:   record.skill_other_skills  || '',
+      // Task 2: expose plan for payment page state detection
+      plan:                 record.plan                || null
     }
   }, 200, CORS);
 }

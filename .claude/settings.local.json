@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(file \"c:\\\\Users\\\\britn\\\\OneDrive\\\\developer.virtuallaunch.pro\\\\public\\\\*.{png,jpg,jpeg,webp,gif}\")",
+      "Read(//etc/**)"
+    ]
+  }
+}

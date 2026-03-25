@@ -376,49 +376,74 @@
       return;
     }
 
+    // Skill key→label map for card pills <!-- Theme fix: matched to site token -->
+    const SKILL_LABELS = { javascript:'JavaScript', python:'Python', react:'React', nodejs:'Node.js', typescript:'TypeScript', aws:'AWS', docker:'Docker', mongodb:'MongoDB', postgresql:'PostgreSQL' };
+
     grid.innerHTML = developers.map(d => {
-      const linkedinLink = d.linkedin_url
-        ? `<a href="${esc(d.linkedin_url)}" target="_blank" rel="noopener noreferrer" title="LinkedIn"
-             class="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition mt-1">
-             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
-             LinkedIn</a>`
+      // Avatar initials from full_name — site token: emerald gradient matching VLP logo style <!-- Theme fix: matched to site token -->
+      const initials = (d.full_name || '?').split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+      // Top skills: derive from skill_* numeric fields, show up to 4 rated ≥ 1, sorted by rating desc
+      const topSkills = Object.entries(SKILL_LABELS)
+        .map(([key, label]) => ({ label, val: parseInt(d[`skill_${key}`], 10) || 0 }))
+        .filter(s => s.val >= 1)
+        .sort((a, b) => b.val - a.val)
+        .slice(0, 4);
+
+      // Skill pills — site token: bg-slate-900 border-slate-700/40 text-slate-400 <!-- Theme fix: matched to site token -->
+      const skillPills = topSkills.map(s =>
+        `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs border border-slate-700/40 bg-slate-900 text-slate-400">${esc(s.label)}</span>`
+      ).join('');
+
+      // Availability badge — site token: badge-complete style from operator.html <!-- Theme fix: matched to site token -->
+      const availBadge = d.availability
+        ? `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold flex-shrink-0" style="background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);">${esc(d.availability)}</span>`
         : '';
 
-      const portfolioLink = d.portfolio_url
-        ? `<a href="${esc(d.portfolio_url)}" target="_blank" rel="noopener noreferrer" title="Portfolio"
-             class="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 transition mt-1">
-             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-             Portfolio</a>`
-        : '';
-
-      const videoThumb = d.video_url
-        ? `<a href="${esc(d.video_url)}" target="_blank" rel="noopener noreferrer"
-             class="inline-flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition mt-1">
-             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-             Video</a>`
+      // Contract badge — site token: slate surface style from operator.html <!-- Theme fix: matched to site token -->
+      const contractBadge = d.contract_type
+        ? `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style="background:rgba(100,116,139,.15);color:#94a3b8;border:1px solid rgba(100,116,139,.2);">${esc(d.contract_type)}</span>`
         : '';
 
       const rate = d.hourly_rate ? `$${esc(d.hourly_rate)}/hr` : '';
       const summary = (d.professional_summary || '').slice(0, 180) + ((d.professional_summary || '').length > 180 ? '…' : '');
 
+      // Profile links as icon-only — site hover token: blue-400/emerald-400/red-400 <!-- Theme fix: matched to site token -->
+      const linkedinLink = d.linkedin_url
+        ? `<a href="${esc(d.linkedin_url)}" target="_blank" rel="noopener noreferrer" title="LinkedIn" class="text-slate-400 hover:text-blue-400 transition">
+             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+           </a>` : '';
+
+      const portfolioLink = d.portfolio_url
+        ? `<a href="${esc(d.portfolio_url)}" target="_blank" rel="noopener noreferrer" title="Portfolio" class="text-slate-400 hover:text-emerald-400 transition">
+             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+           </a>` : '';
+
+      const videoLink = d.video_url
+        ? `<a href="${esc(d.video_url)}" target="_blank" rel="noopener noreferrer" title="Video" class="text-slate-400 hover:text-red-400 transition">
+             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+           </a>` : '';
+
       return `
-        <div class="flex flex-col rounded-2xl border border-slate-700/50 bg-slate-800/30 p-6 hover:border-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/5 transition-all duration-300">
-          <div class="flex items-start justify-between gap-3 mb-3">
-            <div class="min-w-0">
+        <div class="flex flex-col rounded-2xl border border-slate-700/50 bg-slate-800/30 p-5 hover:border-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/5 transition-all duration-300">
+          <div class="flex items-start gap-3 mb-3">
+            <div class="flex-shrink-0 w-11 h-11 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-sm font-bold text-slate-950 shadow-md shadow-emerald-500/20">${esc(initials)}</div>
+            <div class="flex-1 min-w-0">
               <h3 class="font-semibold text-slate-100 text-base truncate">${esc(d.full_name)}</h3>
               ${d.country ? `<p class="text-xs text-slate-400 mt-0.5">${esc(d.country)}</p>` : ''}
             </div>
-            ${rate ? `<span class="text-sm font-semibold text-emerald-400 whitespace-nowrap">${rate}</span>` : ''}
+            ${availBadge}
           </div>
-
-          ${d.availability ? `<p class="text-xs text-slate-500 mb-3"><span class="text-slate-400">Availability:</span> ${esc(d.availability)}</p>` : ''}
-
-          ${summary ? `<p class="text-sm text-slate-300 leading-relaxed flex-1 mb-4">${esc(summary)}</p>` : '<p class="flex-1"></p>'}
-
-          <div class="flex flex-wrap gap-3 mt-auto pt-3 border-t border-slate-700/30">
-            ${linkedinLink}
-            ${portfolioLink}
-            ${videoThumb}
+          ${summary ? `<p class="text-sm text-slate-300 leading-relaxed line-clamp-2 mb-3">${esc(summary)}</p>` : ''}
+          ${skillPills ? `<div class="flex flex-wrap gap-1.5 mb-3">${skillPills}</div>` : ''}
+          <div class="flex items-center justify-between gap-2 mt-auto pt-3 border-t border-slate-700/30">
+            <div class="flex items-center gap-2 min-w-0">
+              ${rate ? `<span class="text-sm font-semibold text-emerald-400 whitespace-nowrap">${rate}</span>` : ''}
+              ${contractBadge}
+            </div>
+            <div class="flex items-center gap-2.5 flex-shrink-0">
+              ${linkedinLink}${portfolioLink}${videoLink}
+            </div>
           </div>
         </div>`;
     }).join('');

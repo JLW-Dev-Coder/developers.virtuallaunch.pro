@@ -787,7 +787,9 @@
         // Set initial payment state
         sessionStorage.setItem('vl_payment_state', 'plan-selection');
         setPaymentUIState('plan-selection');
-        setPlanState(plan);
+        // Fall back to localStorage plan written by success.html after confirmed checkout
+        const effectivePlan = plan || localStorage.getItem('vlp_current_plan') || null;
+        setPlanState(effectivePlan);
         showPage('payment-page');
         lucide.createIcons();
       }

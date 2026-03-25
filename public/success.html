@@ -283,6 +283,7 @@
             clearInterval(pollTimer);
             sessionStorage.setItem('vl_payment_state', 'completed');
             if (data.vlp_ref) sessionStorage.setItem('vlp_ref', data.vlp_ref);
+            if (data.plan) localStorage.setItem('vlp_current_plan', data.plan);
             renderPaymentState('completed', { plan: data.plan, vlp_ref: data.vlp_ref || null });
             return;
           }

@@ -11,7 +11,7 @@
       "governs": "Public intake form submission for requesting a developer match (company, contact info, project details, skills preferences).",
       "version": 1,
       "status": "active",
-      "handlerPath": "functions/forms/find-developers.js",
+      "handlerPath": "functions/forms/developer-match-intake.js",
       "handlerStatus": "implemented"
     },
     {

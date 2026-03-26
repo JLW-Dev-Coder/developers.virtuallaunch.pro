@@ -32,9 +32,9 @@
 - Operator canned responses: `functions/operator/canned-responses.js` → GET `/operator/canned-responses` (list with optional ?userType filter) + POST (create new template; isDefault:false)
 - Operator canned response PATCH/DELETE: `functions/operator/canned-responses/[templateId].js` → PATCH `/operator/canned-responses/{templateId}` (edit mutable fields) + DELETE (isDefault guard — cannot delete default templates)
 - Canned response seed script: `scripts/seed-canned-responses.js` → writes 11 isDefault:true templates (4 developer + 4 client + 3 legacy migrated) to R2 via Cloudflare REST API
-- Developer match intake handler: `functions/forms/find-developers.js` → POST `/forms/developer-match-intake` (no auth; writes to `developer-match-requests/{eventId}.json` + receipt to `receipts/form/{eventId}.json`)
+- Developer match intake handler: `functions/forms/developer-match-intake.js` → POST `/forms/developer-match-intake` (no auth; writes to `developer-match-requests/{eventId}.json` + receipt to `receipts/form/{eventId}.json`)
 - Cron job match handler: `functions/cron/job-match.js` → POST `/cron/job-match` (x-cron-secret auth — NOT operator Bearer; matches active/published developers to a job by skill; sends bulk email via Resend; updates nextNotificationDue per cronSchedule; writes run record + receipt to R2; KV dedupe in OPERATOR_SESSIONS)
-- Onboarding status handler: `functions/forms/onboarding/status.js` → GET `/forms/onboarding/status?referenceId=VLP-xxx` (no auth — public; returns status + lastUpdated only; R2 prefix scan by ref_number)
+- Onboarding status handler: `functions/forms/onboarding/status.js` → GET `/forms/onboarding/status?referenceId=VLP-xxx` (no auth — public; returns status + lastUpdated only; direct R2 key lookup by referenceId)
 
 ## Stripe Integration
 - Webhook endpoint: https://api.virtuallaunch.pro/v1/webhooks/stripe
@@ -563,3 +563,26 @@ to drive the weekly cron schedule for the Pages project. It is not part of the P
 - Auth: `CRON_SECRET` env var (set in Cloudflare dashboard → Worker → Settings → Variables)
 - Updated `.claude/CLAUDE.md`: added "Cron Trigger Worker" section and this audit log entry
 - Updated `.claude/registry.json`: added `workers/cron-trigger/index.js` entry to `sharedAssets`
+
+### 2026-03-26 — Fix onboarding/status.js not_found + find-developers routing 405
+
+**Fix 1 — functions/forms/onboarding/status.js**
+- Root cause: Handler scanned `onboarding-records/` and compared `record.ref_number === referenceId`.
+  Fresh POST records contain `eventId` and `recordId` but NOT `ref_number` — that field only appears
+  after an operator PATCH (which merges the PATCH payload including `ref_number` into the record).
+  So `record.ref_number` was always `undefined` for un-patched records → always returned `not_found`.
+- Fix: Replaced prefix scan with direct key lookup — `onboarding-records/${referenceId}.json`.
+  Valid because `referenceId === eventId === recordId === R2 key suffix` (confirmed in
+  contracts/onboarding.json effects.canonicalUpsert: target = `onboarding-records/{recordId}.json`
+  and `recordId = payload.eventId`). Same pattern used by `webhook.js` and `operator/developer.js`.
+- Updated Key Files entry: "R2 prefix scan by ref_number" → "direct R2 key lookup by referenceId"
+
+**Fix 2 — functions/forms/find-developers.js → developer-match-intake.js**
+- Root cause: File at `functions/forms/find-developers.js` maps to route `/forms/find-developers`
+  (Cloudflare Pages Functions file-based routing). Contract defines endpoint `/forms/developer-match-intake`.
+  Mismatch caused 405 Method Not Allowed on POST /forms/developer-match-intake.
+- Fix: Renamed file to `functions/forms/developer-match-intake.js` (Option A — simpler, consistent
+  with other form handlers). Content identical — no logic changes.
+- Old file deleted: `functions/forms/find-developers.js`
+- Updated `contracts/registry.json`: handlerPath → `"functions/forms/developer-match-intake.js"`
+- Updated Key Files entry to reflect new filename

@@ -16,40 +16,34 @@ export async function onRequestGet(context) {
     });
   }
 
-  // Scan onboarding-records/ for a record matching ref_number
-  let cursor;
-  do {
-    const listOpts = { prefix: 'onboarding-records/' };
-    if (cursor) listOpts.cursor = cursor;
-
-    const list = await env.ONBOARDING_R2.list(listOpts);
-
-    for (const obj of list.objects) {
-      try {
-        const res = await env.ONBOARDING_R2.get(obj.key);
-        if (!res) continue;
-        const record = JSON.parse(await res.text());
-        if (record.ref_number === referenceId) {
-          return new Response(JSON.stringify({
-            ok: true,
-            referenceId,
-            status: record.status,
-            lastUpdated: record.updatedAt
-          }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-          });
-        }
-      } catch {
-        // Skip unreadable records
-      }
+  // Direct key lookup — referenceId === eventId === recordId === R2 key suffix.
+  // Fresh records (POST only, never operator-PATCH'd) have eventId/recordId but not
+  // ref_number, so a prefix scan comparing record.ref_number always returns undefined.
+  const key = `onboarding-records/${referenceId}.json`;
+  let record;
+  try {
+    const res = await env.ONBOARDING_R2.get(key);
+    if (!res) {
+      return new Response(JSON.stringify({ ok: false, error: 'not_found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
+    record = JSON.parse(await res.text());
+  } catch {
+    return new Response(JSON.stringify({ ok: false, error: 'not_found' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 
-    cursor = list.truncated ? list.cursor : null;
-  } while (cursor);
-
-  return new Response(JSON.stringify({ ok: false, error: 'not_found' }), {
-    status: 404,
+  return new Response(JSON.stringify({
+    ok: true,
+    referenceId,
+    status: record.status,
+    lastUpdated: record.updatedAt
+  }), {
+    status: 200,
     headers: { 'Content-Type': 'application/json' }
   });
 }

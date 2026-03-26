@@ -2,9 +2,9 @@
 // POST /operator/tickets/{ticketId}/reply — operator reply to a support ticket
 // Response: { ok, ticketId, eventId, repliedAt }
 
-import { verifyOperatorToken }  from '../../../_verifyToken.js';
-import { sendTransactionalEmail } from '../../../../_shared/email.js';
-import { supportTicketReply }   from '../../../../_shared/emailTemplates.js';
+import { verifyOperatorToken }  from '../../_verifyToken.js';
+import { sendTransactionalEmail } from '../../../_shared/email.js';
+import { supportTicketReply }   from '../../../_shared/emailTemplates.js';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 

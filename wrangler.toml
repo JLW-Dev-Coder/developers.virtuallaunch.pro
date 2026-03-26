@@ -1,6 +1,7 @@
 name = "vlp-onboarding-worker"
 main = "workers/src/index.js"
 compatibility_date = "2026-03-20"
+pages_build_output_dir = "."
 
 [[r2_buckets]]
 binding = "ONBOARDING_R2"

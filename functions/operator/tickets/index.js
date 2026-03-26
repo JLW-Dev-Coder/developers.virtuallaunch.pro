@@ -2,7 +2,7 @@
 // GET /operator/tickets — list all support tickets with optional ?status filter
 // Response: { ok, results: [{ ticketId, clientRef, subject, status, submittedAt, replyCount }] }
 
-import { verifyOperatorToken } from '../../_verifyToken.js';
+import { verifyOperatorToken } from '../_verifyToken.js';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 

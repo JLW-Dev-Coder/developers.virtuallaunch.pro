@@ -1,0 +1,108 @@
+{
+  "auth": {
+    "required": true,
+    "trustClientIdentityFields": false,
+    "type": "signature"
+  },
+  "contract": {
+    "authority": ["R2_VIRTUAL_LAUNCH"],
+    "governs": "Authenticated operator CRUD for saveable message templates — list, create, edit, and delete canned responses by user type",
+    "path": "contracts/operator-canned-responses.json",
+    "source": "Virtual Launch Pro",
+    "title": "Virtual Launch Pro — Operator Contract — Canned Responses",
+    "usedOnPages": ["/operator", "/operator.html"],
+    "validation": {
+      "enumStrict": true,
+      "normalizeCheckboxToBoolean": true,
+      "rejectUnknownValues": true,
+      "requireJsonContentType": true
+    },
+    "version": 1
+  },
+  "delivery": {
+    "endpoint": "/operator/canned-responses",
+    "method": "GET",
+    "receiptKeyPattern": null,
+    "receiptSource": null,
+    "signature": {
+      "header": "Authorization",
+      "required": true,
+      "secretEnvVar": "OPERATOR_SESSIONS"
+    }
+  },
+  "effects": {
+    "dedupeKey": null,
+    "eventIdFrom": null,
+    "writeOrder": [],
+    "writes": []
+  },
+  "payload": {
+    "additionalProperties": false,
+    "properties": {
+      "userType": {
+        "type": "string",
+        "enum": ["developer", "client", "all"],
+        "description": "Filter templates by target user type"
+      }
+    },
+    "required": [],
+    "type": "object"
+  },
+  "response": {
+    "deduped": { "deduped": true, "ok": true },
+    "error":   { "error": "unauthorized", "ok": false },
+    "success": {
+      "ok": true,
+      "templates": [
+        {
+          "templateId": "{template.templateId}",
+          "userType":   "{template.userType}",
+          "label":      "{template.label}",
+          "subject":    "{template.subject}",
+          "body":       "{template.body}",
+          "isDefault":  "{template.isDefault}",
+          "createdAt":  "{template.createdAt}",
+          "updatedAt":  "{template.updatedAt}"
+        }
+      ]
+    }
+  },
+  "schema": {
+    "name": "vlp_operator_canned_responses",
+    "version": 1
+  },
+  "notes": {
+    "authPattern": "Bearer token — see contracts/operator-auth.json",
+    "dataSource": "R2 — operator-canned-responses/{templateId}.json",
+    "seedRequirement": "Minimum 4 default templates per userType (developer, client). isDefault:true templates cannot be deleted, only edited.",
+    "additionalEndpoints": [
+      {
+        "name": "createTemplate",
+        "endpoint": "/operator/canned-responses",
+        "method": "POST",
+        "description": "Create a new canned response template.",
+        "payload": "{ eventId (required), userType (required), label (required), subject (required), body (required) }",
+        "effects": "Writes to R2 operator-canned-responses/{templateId}.json. Sets isDefault:false.",
+        "response": "{ ok, templateId, eventId }"
+      },
+      {
+        "name": "updateTemplate",
+        "endpoint": "/operator/canned-responses/{templateId}",
+        "method": "PATCH",
+        "description": "Edit an existing template. All fields mutable including on default templates.",
+        "payload": "{ label, subject, body, userType — all optional }",
+        "effects": "Writes to R2 operator-canned-responses/{templateId}.json. Updates updatedAt.",
+        "response": "{ ok, templateId, updatedAt }"
+      },
+      {
+        "name": "deleteTemplate",
+        "endpoint": "/operator/canned-responses/{templateId}",
+        "method": "DELETE",
+        "description": "Delete a custom template. Default templates (isDefault:true) cannot be deleted.",
+        "payload": "No body.",
+        "effects": "Removes R2 object at operator-canned-responses/{templateId}.json.",
+        "response": "{ ok, templateId, deleted:true } or { ok:false, error:protected } if isDefault:true"
+      }
+    ]
+  }
+}

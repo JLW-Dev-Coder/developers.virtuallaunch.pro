@@ -6,11 +6,13 @@ const FROM_NAME  = 'Virtual Launch Pro';
 
 export { FROM_EMAIL, FROM_NAME };
 
-export async function sendEmail(env, toEmail, subject, bodyText) {
+export async function sendEmail(env, toEmail, subject, bodyText, html) {
   const privateKey  = env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n');
   const clientEmail = env.GOOGLE_CLIENT_EMAIL;
   const accessToken = await getGoogleAccessToken(clientEmail, privateKey);
-  const raw = buildRawEmail(FROM_EMAIL, FROM_NAME, toEmail, subject, bodyText);
+  const raw = html
+    ? buildRawEmailHtml(FROM_EMAIL, FROM_NAME, toEmail, subject, html, bodyText)
+    : buildRawEmail(FROM_EMAIL, FROM_NAME, toEmail, subject, bodyText);
 
   const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
     method: 'POST',
@@ -36,6 +38,40 @@ export function buildRawEmail(fromEmail, fromName, toEmail, subject, bodyText) {
     `Content-Type: text/plain; charset=UTF-8`,
     ``,
     bodyText
+  ].join('\r\n');
+
+  return btoa(unescape(encodeURIComponent(message)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+/**
+ * buildRawEmailHtml — multipart/alternative with text/plain fallback + text/html part.
+ * If text is omitted the plain fallback is empty.
+ */
+export function buildRawEmailHtml(fromEmail, fromName, toEmail, subject, htmlBody, textFallback) {
+  const boundary = `vlp_boundary_${Date.now()}`;
+  const plain    = textFallback || '';
+
+  const message = [
+    `From: ${fromName} <${fromEmail}>`,
+    `To: ${toEmail}`,
+    `Subject: ${subject}`,
+    `MIME-Version: 1.0`,
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    ``,
+    `--${boundary}`,
+    `Content-Type: text/plain; charset=UTF-8`,
+    ``,
+    plain,
+    ``,
+    `--${boundary}`,
+    `Content-Type: text/html; charset=UTF-8`,
+    ``,
+    htmlBody,
+    ``,
+    `--${boundary}--`
   ].join('\r\n');
 
   return btoa(unescape(encodeURIComponent(message)))

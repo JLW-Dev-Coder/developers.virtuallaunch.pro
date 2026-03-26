@@ -56,7 +56,6 @@ export async function checkClientStatus(referenceId) {
   if (!referenceId) return { ok: false, error: 'no_reference' };
 
   try {
-    // TODO: verify endpoint against contract
     const res = await fetch(`/forms/onboarding/status?referenceId=${encodeURIComponent(referenceId)}`);
     const data = await res.json();
 

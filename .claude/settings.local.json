@@ -6,6 +6,9 @@
       "Bash(npm install:*)",
       "Bash(node -e \"console.log\\(require\\(''./node_modules/stripe/package.json''\\).version\\)\")",
       "Bash(python -:*)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\britn\\OneDrive\\developers.virtuallaunch.pro\\functions\\operator\\tickets"
     ]
   }
 }

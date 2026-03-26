@@ -1,0 +1,106 @@
+{
+  "auth": {
+    "required": true,
+    "trustClientIdentityFields": false,
+    "type": "signature"
+  },
+  "contract": {
+    "authority": ["R2_VIRTUAL_LAUNCH"],
+    "governs": "Internal job matching trigger — evaluates developer skills against job required_skills, queues notifications, updates nextNotificationDue per cronSchedule",
+    "path": "contracts/cron-job-match.json",
+    "source": "Virtual Launch Pro",
+    "title": "Virtual Launch Pro — Cron Contract — Job Match",
+    "usedOnPages": [],
+    "validation": {
+      "enumStrict": true,
+      "normalizeCheckboxToBoolean": true,
+      "rejectUnknownValues": true,
+      "requireJsonContentType": true
+    },
+    "version": 2
+  },
+  "delivery": {
+    "endpoint": "/cron/job-match",
+    "method": "POST",
+    "receiptKeyPattern": "receipts/cron/job-match/{eventId}.json",
+    "receiptSource": "cron",
+    "signature": {
+      "header": "x-cron-secret",
+      "required": true,
+      "secretEnvVar": "CRON_SECRET"
+    }
+  },
+  "effects": {
+    "dedupeKey": "payload.eventId",
+    "eventIdFrom": "payload.eventId",
+    "writeOrder": ["receiptAppend", "canonicalUpsert"],
+    "writes": ["cron-job-match-runs", "onboarding-records"],
+    "receiptAppend": {
+      "to": "receipts/cron/job-match/{eventId}.json"
+    },
+    "canonicalUpsert": {
+      "target": "cron-job-match-runs/{eventId}.json",
+      "patchFrom": "effects.canonicalPatch"
+    },
+    "canonicalPatch": {
+      "eventId":      "{payload.eventId}",
+      "jobId":        "{payload.jobId}",
+      "matchedCount": "{system.matchedCount}",
+      "queuedCount":  "{system.queuedCount}",
+      "ranAt":        "{system.nowIso}",
+      "status":       "complete"
+    },
+    "sideEffect": "Updates nextNotificationDue on each matched developer record in onboarding-records/{recordId}.json based on their cronSchedule value"
+  },
+  "payload": {
+    "additionalProperties": false,
+    "properties": {
+      "eventId":         { "type": "string", "minLength": 1 },
+      "jobId":           { "type": "string", "minLength": 1, "description": "Job post ID from job-posts/{jobId}.json" },
+      "required_skills": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Skill keys to match against developer records"
+      },
+      "notifyAll":       { "type": "boolean", "description": "If true, notify all active developers regardless of skill match" }
+    },
+    "required": ["eventId", "jobId"],
+    "type": "object"
+  },
+  "response": {
+    "deduped": { "deduped": true, "eventId": "{effects.eventIdFrom}", "ok": true },
+    "error":   { "error": "validation_failed", "ok": false },
+    "success": {
+      "ok": true,
+      "eventId": "{effects.eventIdFrom}",
+      "jobId": "{payload.jobId}",
+      "matchedCount": "{system.matchedCount}",
+      "queuedCount": "{system.queuedCount}",
+      "ranAt": "{effects.canonicalPatch.ranAt}"
+    }
+  },
+  "schema": {
+    "name": "vlp_cron_job_match",
+    "version": 1
+  },
+  "notes": {
+    "authPattern": "x-cron-secret header — CRON_SECRET env var. Not operator Bearer token.",
+    "triggerSources": [
+      "POST /operator/jobs (new job post creation) — see contracts/operator-jobs.json",
+      "POST /operator/post (poster approval) — see contracts/operator-post.json",
+      "Cloudflare Cron Trigger (scheduled) — fires on cadence defined in wrangler.toml"
+    ],
+    "matchingLogic": "Worker reads all onboarding-records/ with status:active and publish_profile:true. Scores each against required_skills. Matches = any developer with skill rating >= 1 for at least one required skill.",
+    "notificationScheduling": "nextNotificationDue set based on developer cronSchedule: 3 days=+3d, 7 days=+7d, 14 days=+14d from system.nowIso.",
+    "additionalEndpoints": [
+      {
+        "name": "cronStatus",
+        "endpoint": "/cron/status",
+        "method": "GET",
+        "description": "Returns last N cron run receipts for operator visibility. Auth: operator Bearer token.",
+        "payload": "Optional query param: limit (default 10)",
+        "response": "{ ok, runs: [{ eventId, jobId, matchedCount, queuedCount, ranAt, status }] }"
+      }
+    ]
+  }
+}

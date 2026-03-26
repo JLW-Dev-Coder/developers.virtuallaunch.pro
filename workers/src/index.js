@@ -28,6 +28,8 @@ export default {
   }
 };
 
+// DEAD CODE — shadowed by Pages Function at functions/forms/onboarding.js
+// Do not modify. Remove this block when Workers migration is confirmed complete.
 /**
  * =========================
  * Onboarding Handler

@@ -1,0 +1,70 @@
+{
+  "auth": {
+    "required": false,
+    "trustClientIdentityFields": false,
+    "type": "none"
+  },
+  "contract": {
+    "authority": ["R2_VIRTUAL_LAUNCH"],
+    "governs": "Public read of onboarding submission status by VLP- reference ID",
+    "path": "contracts/onboarding-status.json",
+    "source": "Virtual Launch Pro",
+    "title": "Virtual Launch Pro — Form Contract — Onboarding Status",
+    "usedOnPages": ["/public/onboarding.html"],
+    "validation": {
+      "enumStrict": true,
+      "normalizeCheckboxToBoolean": true,
+      "rejectUnknownValues": true,
+      "requireJsonContentType": true
+    },
+    "version": 1
+  },
+  "delivery": {
+    "endpoint": "/forms/onboarding/status",
+    "method": "GET",
+    "receiptKeyPattern": null,
+    "receiptSource": null,
+    "signature": {
+      "header": null,
+      "required": false,
+      "secretEnvVar": null
+    }
+  },
+  "effects": {
+    "dedupeKey": null,
+    "eventIdFrom": null,
+    "writeOrder": [],
+    "writes": []
+  },
+  "payload": {
+    "additionalProperties": false,
+    "properties": {
+      "referenceId": {
+        "type": "string",
+        "minLength": 1,
+        "description": "VLP- prefixed reference ID for the onboarding submission"
+      }
+    },
+    "required": ["referenceId"],
+    "type": "object"
+  },
+  "response": {
+    "deduped": { "deduped": true, "ok": true, "referenceId": "{payload.referenceId}" },
+    "error":   { "error": "not_found", "ok": false },
+    "success": {
+      "ok": true,
+      "referenceId": "{payload.referenceId}",
+      "status": "{record.status}",
+      "lastUpdated": "{record.updatedAt}"
+    }
+  },
+  "schema": {
+    "name": "vlp_form_onboarding_status",
+    "version": 1
+  },
+  "notes": {
+    "calledBy": "functions/forms/clientReference.js — checkClientStatus()",
+    "dataSource": "R2 — onboarding-records/{recordId}.json (lookup by ref_number index or prefix scan)",
+    "authNote": "Public endpoint — no auth required. Returns status and lastUpdated only, not full record."
+  }
+}

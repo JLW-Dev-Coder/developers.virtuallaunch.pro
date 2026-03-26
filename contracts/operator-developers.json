@@ -1,0 +1,124 @@
+{
+  "auth": {
+    "required": true,
+    "trustClientIdentityFields": false,
+    "type": "signature"
+  },
+  "contract": {
+    "authority": ["R2_VIRTUAL_LAUNCH"],
+    "governs": "Authenticated operator read and mutation of individual developer records — lookup by ref, list all, publish toggle, profile and status edits",
+    "path": "contracts/operator-developers.json",
+    "source": "Virtual Launch Pro",
+    "title": "Virtual Launch Pro — Operator Contract — Developers",
+    "usedOnPages": ["/operator", "/operator.html"],
+    "validation": {
+      "enumStrict": true,
+      "normalizeCheckboxToBoolean": true,
+      "rejectUnknownValues": true,
+      "requireJsonContentType": true
+    },
+    "version": 1
+  },
+  "delivery": {
+    "endpoint": "/operator/developer",
+    "method": "GET",
+    "receiptKeyPattern": null,
+    "receiptSource": null,
+    "signature": {
+      "header": "Authorization",
+      "required": true,
+      "secretEnvVar": "OPERATOR_SESSIONS"
+    }
+  },
+  "effects": {
+    "dedupeKey": null,
+    "eventIdFrom": null,
+    "writeOrder": [],
+    "writes": []
+  },
+  "payload": {
+    "additionalProperties": false,
+    "properties": {
+      "ref": {
+        "type": "string",
+        "minLength": 1,
+        "description": "VLP- prefixed developer reference number"
+      }
+    },
+    "required": ["ref"],
+    "type": "object"
+  },
+  "response": {
+    "deduped": {
+      "deduped": true,
+      "ok": true
+    },
+    "error": {
+      "error": "not_found",
+      "ok": false
+    },
+    "success": {
+      "ok": true,
+      "record": {
+        "ref_number": "{record.ref_number}",
+        "full_name": "{record.full_name}",
+        "email": "{record.email}",
+        "phone": "{record.phone}",
+        "country": "{record.country}",
+        "linkedin_url": "{record.linkedin_url}",
+        "portfolio_url": "{record.portfolio_url}",
+        "professional_summary": "{record.professional_summary}",
+        "ideal_role": "{record.ideal_role}",
+        "contract_type": "{record.contract_type}",
+        "timezone": "{record.timezone}",
+        "hourly_rate": "{record.hourly_rate}",
+        "availability": "{record.availability}",
+        "publish_profile": "{record.publish_profile}",
+        "status": "{record.status}",
+        "cronSchedule": "{record.cronSchedule}",
+        "nextNotificationDue": "{record.nextNotificationDue}",
+        "skills": {
+          "skill_javascript": "{record.skill_javascript}",
+          "skill_python": "{record.skill_python}",
+          "skill_react": "{record.skill_react}",
+          "skill_nodejs": "{record.skill_nodejs}",
+          "skill_typescript": "{record.skill_typescript}",
+          "skill_aws": "{record.skill_aws}",
+          "skill_docker": "{record.skill_docker}",
+          "skill_mongodb": "{record.skill_mongodb}",
+          "skill_postgresql": "{record.skill_postgresql}",
+          "skill_other_skills": "{record.skill_other_skills}"
+        },
+        "createdAt": "{record.createdAt}",
+        "updatedAt": "{record.updatedAt}"
+      }
+    }
+  },
+  "schema": {
+    "name": "vlp_operator_developers",
+    "version": 1
+  },
+  "notes": {
+    "authPattern": "Bearer token validated against KV OPERATOR_SESSIONS — see contracts/operator-auth.json",
+    "dataSource": "R2 — onboarding-records/{recordId}.json",
+    "additionalEndpoints": [
+      {
+        "name": "developerList",
+        "endpoint": "/operator/developers",
+        "method": "GET",
+        "description": "List all developer records (lightweight — ref_number, full_name, status, publish_profile only). Used for operator dropdowns and filters.",
+        "payload": "No body. Optional query params: status, publish (boolean).",
+        "response": "{ ok, results: [{ ref_number, full_name, status, publish_profile }] }"
+      },
+      {
+        "name": "developerPatch",
+        "endpoint": "/operator/developer",
+        "method": "PATCH",
+        "description": "Update a developer record. Mutable fields: publish_profile, status, cronSchedule, professional_summary, ideal_role, contract_type, timezone, hourly_rate, availability, all skill fields. Immutable via this endpoint: ref_number, email, eventId, createdAt.",
+        "payload": "{ ref_number (required), ...mutable fields (all optional) }",
+        "effects": "Writes to R2 onboarding-records/{recordId}.json. Updates updatedAt. Does not write receipt.",
+        "response": "{ ok, ref_number, updatedAt } on success. { ok: false, error: not_found } on missing record."
+      }
+    ]
+  }
+}

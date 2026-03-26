@@ -1,0 +1,82 @@
+{
+  "auth": {
+    "required": true,
+    "trustClientIdentityFields": false,
+    "type": "signature"
+  },
+  "contract": {
+    "authority": ["R2_VIRTUAL_LAUNCH"],
+    "governs": "Operator posts a targeted job opportunity to a specific developer record; triggers cronSchedule-aware notification",
+    "path": "contracts/operator-post.json",
+    "source": "Virtual Launch Pro",
+    "title": "Virtual Launch Pro — Operator Contract — Post to Developer",
+    "usedOnPages": ["/operator", "/operator.html"],
+    "validation": {
+      "enumStrict": true,
+      "normalizeCheckboxToBoolean": true,
+      "rejectUnknownValues": true,
+      "requireJsonContentType": true
+    },
+    "version": 1
+  },
+  "delivery": {
+    "endpoint": "/operator/post",
+    "method": "POST",
+    "receiptKeyPattern": null,
+    "receiptSource": null,
+    "signature": {
+      "header": "Authorization",
+      "required": true,
+      "secretEnvVar": "OPERATOR_SESSIONS"
+    }
+  },
+  "effects": {
+    "dedupeKey": "payload.eventId",
+    "eventIdFrom": "payload.eventId",
+    "writeOrder": ["canonicalUpsert"],
+    "writes": ["operator-posts"],
+    "canonicalUpsert": {
+      "target": "operator-posts/{ref_number}/{eventId}.json",
+      "patchFrom": "effects.canonicalPatch"
+    },
+    "canonicalPatch": {
+      "eventId": "{payload.eventId}",
+      "ref_number": "{payload.ref_number}",
+      "jobTitle": "{payload.jobTitle}",
+      "jobDescription": "{payload.jobDescription}",
+      "postedAt": "{system.nowIso}",
+      "notificationStatus": "queued"
+    }
+  },
+  "payload": {
+    "additionalProperties": false,
+    "properties": {
+      "eventId":        { "type": "string", "minLength": 1 },
+      "ref_number":     { "type": "string", "minLength": 1, "description": "Target developer VLP- ref" },
+      "jobTitle":       { "type": "string", "minLength": 1, "maxLength": 200 },
+      "jobDescription": { "type": "string", "minLength": 1, "maxLength": 5000 },
+      "jobId":          { "type": "string", "minLength": 1, "description": "Optional link to a job post in operator-jobs" }
+    },
+    "required": ["eventId", "ref_number", "jobTitle", "jobDescription"],
+    "type": "object"
+  },
+  "response": {
+    "deduped": { "deduped": true, "eventId": "{effects.eventIdFrom}", "ok": true },
+    "error":   { "error": "not_found", "ok": false },
+    "success": {
+      "ok": true,
+      "eventId": "{effects.eventIdFrom}",
+      "ref_number": "{payload.ref_number}",
+      "notificationStatus": "queued"
+    }
+  },
+  "schema": {
+    "name": "vlp_operator_post",
+    "version": 1
+  },
+  "notes": {
+    "authPattern": "Bearer token — see contracts/operator-auth.json",
+    "notificationTrigger": "Worker should check developer cronSchedule and set nextNotificationDue accordingly after write",
+    "cronContract": "contracts/cron-job-match.json (pending)"
+  }
+}

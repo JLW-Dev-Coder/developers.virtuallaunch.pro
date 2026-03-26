@@ -1,0 +1,114 @@
+{
+  "auth": {
+    "required": true,
+    "trustClientIdentityFields": false,
+    "type": "signature"
+  },
+  "contract": {
+    "authority": ["R2_VIRTUAL_LAUNCH"],
+    "governs": "Authenticated operator threaded messaging to developers and support ticket display and reply",
+    "path": "contracts/operator-messages.json",
+    "source": "Virtual Launch Pro",
+    "title": "Virtual Launch Pro — Operator Contract — Messages",
+    "usedOnPages": ["/operator", "/operator.html"],
+    "validation": {
+      "enumStrict": true,
+      "normalizeCheckboxToBoolean": true,
+      "rejectUnknownValues": true,
+      "requireJsonContentType": true
+    },
+    "version": 1
+  },
+  "delivery": {
+    "endpoint": "/operator/messages",
+    "method": "POST",
+    "receiptKeyPattern": "receipts/operator/messages/{eventId}.json",
+    "receiptSource": "operator",
+    "signature": {
+      "header": "Authorization",
+      "required": true,
+      "secretEnvVar": "OPERATOR_SESSIONS"
+    }
+  },
+  "effects": {
+    "dedupeKey": "payload.eventId",
+    "eventIdFrom": "payload.eventId",
+    "writeOrder": ["receiptAppend", "canonicalUpsert"],
+    "writes": ["operator-messages"],
+    "receiptAppend": {
+      "to": "receipts/operator/messages/{eventId}.json"
+    },
+    "canonicalUpsert": {
+      "target": "operator-messages/{ref_number}/{eventId}.json",
+      "patchFrom": "effects.canonicalPatch"
+    },
+    "canonicalPatch": {
+      "eventId":    "{payload.eventId}",
+      "ref_number": "{payload.ref_number}",
+      "subject":    "{payload.subject}",
+      "body":       "{payload.body}",
+      "sentAt":     "{system.nowIso}",
+      "direction":  "outbound",
+      "read":       false
+    }
+  },
+  "payload": {
+    "additionalProperties": false,
+    "properties": {
+      "eventId":    { "type": "string", "minLength": 1 },
+      "ref_number": { "type": "string", "minLength": 1, "description": "Target developer VLP- ref" },
+      "subject":    { "type": "string", "minLength": 1, "maxLength": 200 },
+      "body":       { "type": "string", "minLength": 1, "maxLength": 10000 },
+      "templateId": { "type": "string", "description": "Optional canned response template ID" },
+      "replyToId":  { "type": "string", "description": "eventId of message being replied to — threads messages together" }
+    },
+    "required": ["eventId", "ref_number", "subject", "body"],
+    "type": "object"
+  },
+  "response": {
+    "deduped": { "deduped": true, "eventId": "{effects.eventIdFrom}", "ok": true },
+    "error":   { "error": "not_found", "ok": false },
+    "success": {
+      "ok": true,
+      "eventId": "{effects.eventIdFrom}",
+      "ref_number": "{payload.ref_number}",
+      "sentAt": "{effects.canonicalPatch.sentAt}"
+    }
+  },
+  "schema": {
+    "name": "vlp_operator_messages",
+    "version": 1
+  },
+  "notes": {
+    "authPattern": "Bearer token — see contracts/operator-auth.json",
+    "dataSource": "R2 — operator-messages/{ref_number}/{eventId}.json",
+    "threadingModel": "Messages linked by replyToId field. Thread = all messages sharing a root eventId chain for a given ref_number.",
+    "additionalEndpoints": [
+      {
+        "name": "messageThread",
+        "endpoint": "/operator/messages",
+        "method": "GET",
+        "description": "Fetch full message thread for a developer by ref. Returns messages in chronological order including inbound replies.",
+        "payload": "Query param: ref (required VLP- ref number)",
+        "response": "{ ok, ref_number, messages: [{ eventId, subject, body, direction, sentAt, read, replyToId }] }"
+      },
+      {
+        "name": "ticketList",
+        "endpoint": "/operator/tickets",
+        "method": "GET",
+        "description": "List all support tickets submitted via /forms/support. Optional filter: ?status=open|closed",
+        "payload": "No body. Optional query param: status",
+        "response": "{ ok, results: [{ ticketId, clientRef, subject, status, submittedAt, replyCount }] }"
+      },
+      {
+        "name": "ticketReply",
+        "endpoint": "/operator/tickets/{ticketId}/reply",
+        "method": "POST",
+        "description": "Operator reply to a support ticket. Appends reply to ticket thread in R2.",
+        "payload": "{ eventId (required), body (required), templateId (optional) }",
+        "effects": "Appends to support-records/{ticketId}/replies/{eventId}.json. Updates ticket status to in_progress if currently open.",
+        "response": "{ ok, ticketId, eventId, repliedAt }"
+      }
+    ]
+  }
+}

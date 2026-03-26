@@ -26,6 +26,9 @@
       "type": "client-form-utility",
       "route": "/forms/onboarding",
       "contract": "contracts/onboarding.json",
+      "contractVersion": 2,
+      "contractMethods": ["POST", "PATCH"],
+      "addedFields": ["skill_javascript", "skill_python", "skill_react", "skill_nodejs", "skill_typescript", "skill_aws", "skill_docker", "skill_mongodb", "skill_postgresql", "skill_other_skills", "ideal_role", "contract_type", "timezone"],
       "description": "Client-side submission and status utilities for the onboarding form."
     }
   ],
@@ -144,6 +147,30 @@
       "purpose": "100% off coupon ID for internal paid plan testing",
       "required": false,
       "location": "Cloudflare dashboard"
+    },
+    {
+      "key": "CF_ZONE_ID",
+      "purpose": "Cloudflare zone ID for Analytics API — page view data in operator analytics",
+      "required": false,
+      "location": "wrangler.toml [vars]"
+    },
+    {
+      "key": "CF_API_TOKEN",
+      "purpose": "Cloudflare API token with Analytics:Read permission for operator analytics page view data",
+      "required": false,
+      "location": "Cloudflare dashboard (wrangler secret put CF_API_TOKEN)"
+    }
+  ],
+  "sharedAssets": [
+    {
+      "path": "functions/_shared/email.js",
+      "category": "asset",
+      "governs": "Unified email dispatch — routes transactional to Gmail API, bulk to Resend"
+    },
+    {
+      "path": "functions/_shared/emailTemplates.js",
+      "category": "asset",
+      "governs": "HTML and plain text templates for all outbound email flows"
     }
   ],
   "dependencies": {

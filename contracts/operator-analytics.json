@@ -1,0 +1,103 @@
+{
+  "auth": {
+    "required": true,
+    "trustClientIdentityFields": false,
+    "type": "signature"
+  },
+  "contract": {
+    "authority": ["R2_VIRTUAL_LAUNCH"],
+    "governs": "Authenticated operator analytics — submission counts across all four forms, time-bucketed metrics, and Cloudflare page view data via Analytics API",
+    "path": "contracts/operator-analytics.json",
+    "source": "Virtual Launch Pro",
+    "title": "Virtual Launch Pro — Operator Contract — Analytics",
+    "usedOnPages": ["/operator", "/operator.html"],
+    "validation": {
+      "enumStrict": true,
+      "normalizeCheckboxToBoolean": true,
+      "rejectUnknownValues": true,
+      "requireJsonContentType": true
+    },
+    "version": 1
+  },
+  "delivery": {
+    "endpoint": "/operator/analytics",
+    "method": "GET",
+    "receiptKeyPattern": null,
+    "receiptSource": null,
+    "signature": {
+      "header": "Authorization",
+      "required": true,
+      "secretEnvVar": "OPERATOR_SESSIONS"
+    }
+  },
+  "effects": {
+    "dedupeKey": null,
+    "eventIdFrom": null,
+    "writeOrder": [],
+    "writes": []
+  },
+  "payload": {
+    "additionalProperties": false,
+    "properties": {
+      "from": {
+        "type": "string",
+        "format": "date",
+        "description": "ISO date string — start of analytics window"
+      },
+      "to": {
+        "type": "string",
+        "format": "date",
+        "description": "ISO date string — end of analytics window"
+      },
+      "bucket": {
+        "type": "string",
+        "enum": ["day", "week", "month"],
+        "description": "Time bucket granularity"
+      }
+    },
+    "required": [],
+    "type": "object"
+  },
+  "response": {
+    "deduped": { "deduped": true, "ok": true },
+    "error":   { "error": "unauthorized", "ok": false },
+    "success": {
+      "ok": true,
+      "window": { "from": "{query.from}", "to": "{query.to}" },
+      "submissions": {
+        "onboarding":     "{system.count.onboarding}",
+        "findDevelopers": "{system.count.findDevelopers}",
+        "support":        "{system.count.support}",
+        "reviews":        "{system.count.reviews}",
+        "total":          "{system.count.total}"
+      },
+      "timeSeries": [
+        {
+          "bucket":         "{system.bucketLabel}",
+          "onboarding":     "{system.count.onboarding}",
+          "findDevelopers": "{system.count.findDevelopers}",
+          "support":        "{system.count.support}",
+          "reviews":        "{system.count.reviews}"
+        }
+      ],
+      "pageViews": {
+        "source": "Cloudflare Analytics API",
+        "data": "{system.cloudflareAnalyticsData}"
+      }
+    }
+  },
+  "schema": {
+    "name": "vlp_operator_analytics",
+    "version": 1
+  },
+  "notes": {
+    "authPattern": "Bearer token — see contracts/operator-auth.json",
+    "dataSources": {
+      "submissions": "R2 prefix scans across onboarding-records/, find-developer-records/, support-records/, review-records/",
+      "pageViews": "Cloudflare Analytics API — requires CF_ACCOUNT_ID and CF_API_TOKEN env vars; uses GraphQL Analytics API endpoint https://api.cloudflare.com/client/v4/graphql"
+    },
+    "defaultWindow": "Last 30 days",
+    "defaultBucket": "day",
+    "cloudflareApiNote": "Worker must call Cloudflare GraphQL Analytics API server-side using zone-level page view data. API token requires Analytics:Read permission."
+  }
+}

@@ -6,7 +6,7 @@
   },
   "contract": {
     "authority": ["R2_VIRTUAL_LAUNCH"],
-    "governs": "Operator session authentication and dashboard data access",
+    "governs": "Multi-endpoint operator data access layer (submissions, developers, analytics, job posts) — authentication is handled by contracts/operator-auth.json",
     "path": "contracts/operator.json",
     "source": "Virtual Launch Pro",
     "title": "Virtual Launch Pro — Operator Contract — Session Auth",
@@ -67,6 +67,11 @@
     "version": 1
   },
   "notes": {
+    "authMigration": {
+      "previous": "x-operator-key header sent on every request",
+      "current": "Bearer token via /operator/auth — see contracts/operator-auth.json",
+      "status": "x-operator-key pattern deprecated"
+    },
     "additionalEndpoints": [
       {
         "name": "submissions",

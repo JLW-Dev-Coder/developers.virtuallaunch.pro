@@ -1,0 +1,118 @@
+{
+  "auth": {
+    "required": true,
+    "trustClientIdentityFields": false,
+    "type": "signature"
+  },
+  "contract": {
+    "authority": ["R2_VIRTUAL_LAUNCH"],
+    "governs": "Authenticated operator read of onboarding submissions with filter and pagination support",
+    "path": "contracts/operator-submissions.json",
+    "source": "Virtual Launch Pro",
+    "title": "Virtual Launch Pro — Operator Contract — Submissions",
+    "usedOnPages": ["/operator", "/operator.html"],
+    "validation": {
+      "enumStrict": true,
+      "normalizeCheckboxToBoolean": true,
+      "rejectUnknownValues": true,
+      "requireJsonContentType": true
+    },
+    "version": 2
+  },
+  "delivery": {
+    "endpoint": "/operator/submissions",
+    "method": "GET",
+    "receiptKeyPattern": null,
+    "receiptSource": null,
+    "signature": {
+      "header": "Authorization",
+      "required": true,
+      "secretEnvVar": "OPERATOR_SESSIONS"
+    }
+  },
+  "effects": {
+    "dedupeKey": null,
+    "eventIdFrom": null,
+    "writeOrder": [],
+    "writes": []
+  },
+  "payload": {
+    "additionalProperties": false,
+    "properties": {
+      "status": {
+        "type": "string",
+        "enum": ["pending", "active", "complete", "archived"],
+        "description": "Filter by submission status"
+      },
+      "type": {
+        "type": "string",
+        "enum": ["developer", "client"],
+        "description": "Filter by user type"
+      },
+      "skill": {
+        "type": "string",
+        "description": "Filter by skill key (e.g. skill_javascript)"
+      },
+      "publish": {
+        "type": "boolean",
+        "description": "Filter by publish_profile value"
+      },
+      "cronSchedule": {
+        "type": "string",
+        "enum": ["3 days", "7 days", "14 days"],
+        "description": "Filter by cron notification schedule"
+      },
+      "page": {
+        "type": "integer",
+        "minimum": 1,
+        "description": "Pagination page number, 1-indexed"
+      },
+      "limit": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 100,
+        "description": "Results per page, max 100"
+      }
+    },
+    "required": [],
+    "type": "object"
+  },
+  "response": {
+    "deduped": {
+      "deduped": true,
+      "ok": true
+    },
+    "error": {
+      "error": "unauthorized",
+      "ok": false
+    },
+    "success": {
+      "ok": true,
+      "page": "{query.page}",
+      "limit": "{query.limit}",
+      "total": "{system.resultCount}",
+      "results": [
+        {
+          "ref_number": "{record.ref_number}",
+          "full_name": "{record.full_name}",
+          "email": "{record.email}",
+          "status": "{record.status}",
+          "publish_profile": "{record.publish_profile}",
+          "cronSchedule": "{record.cronSchedule}",
+          "createdAt": "{record.createdAt}",
+          "updatedAt": "{record.updatedAt}"
+        }
+      ]
+    }
+  },
+  "schema": {
+    "name": "vlp_operator_submissions",
+    "version": 1
+  },
+  "notes": {
+    "defaultLimit": 25,
+    "maxLimit": 100,
+    "dataSource": "R2 — onboarding-records/{recordId}.json (list prefix scan)",
+    "authPattern": "Bearer token validated against KV OPERATOR_SESSIONS — see contracts/operator-auth.json"
+  }
+}

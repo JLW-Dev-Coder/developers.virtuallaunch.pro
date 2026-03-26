@@ -1,0 +1,85 @@
+{
+  "auth": {
+    "required": false,
+    "trustClientIdentityFields": false,
+    "type": "none"
+  },
+  "contract": {
+    "authority": ["R2_VIRTUAL_LAUNCH"],
+    "governs": "Operator login — validates operator key and returns a short-lived Bearer session token",
+    "path": "contracts/operator-auth.json",
+    "source": "Virtual Launch Pro",
+    "title": "Virtual Launch Pro — Operator Contract — Auth",
+    "usedOnPages": ["/operator", "/operator.html"],
+    "validation": {
+      "enumStrict": true,
+      "normalizeCheckboxToBoolean": true,
+      "rejectUnknownValues": true,
+      "requireJsonContentType": true
+    },
+    "version": 1
+  },
+  "delivery": {
+    "endpoint": "/operator/auth",
+    "method": "POST",
+    "receiptKeyPattern": null,
+    "receiptSource": null,
+    "signature": {
+      "header": "x-operator-key",
+      "required": true,
+      "secretEnvVar": "OPERATOR_KEY"
+    }
+  },
+  "effects": {
+    "dedupeKey": "payload.eventId",
+    "eventIdFrom": "payload.eventId",
+    "writeOrder": ["tokenWrite"],
+    "writes": ["operator-sessions"],
+    "tokenWrite": {
+      "storage": "KV",
+      "namespace": "OPERATOR_SESSIONS",
+      "key": "operator-session:{token}",
+      "ttl": 28800,
+      "value": {
+        "token": "{system.generatedToken}",
+        "createdAt": "{system.nowIso}",
+        "expiresAt": "{system.nowIso+8h}",
+        "eventId": "{payload.eventId}"
+      }
+    }
+  },
+  "payload": {
+    "additionalProperties": false,
+    "properties": {
+      "eventId": {
+        "minLength": 1,
+        "type": "string",
+        "description": "Client-generated event ID for this auth attempt"
+      }
+    },
+    "required": ["eventId"],
+    "type": "object"
+  },
+  "response": {
+    "deduped": {
+      "deduped": true,
+      "eventId": "{effects.eventIdFrom}",
+      "ok": true,
+      "token": "{existing.token}"
+    },
+    "error": {
+      "error": "unauthorized",
+      "ok": false
+    },
+    "success": {
+      "eventId": "{effects.eventIdFrom}",
+      "expiresAt": "{effects.tokenWrite.value.expiresAt}",
+      "ok": true,
+      "token": "{effects.tokenWrite.value.token}"
+    }
+  },
+  "schema": {
+    "name": "vlp_operator_auth",
+    "version": 1
+  }
+}

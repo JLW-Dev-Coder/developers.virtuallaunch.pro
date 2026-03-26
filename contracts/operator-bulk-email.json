@@ -1,0 +1,93 @@
+{
+  "auth": {
+    "required": true,
+    "trustClientIdentityFields": false,
+    "type": "signature"
+  },
+  "contract": {
+    "authority": ["R2_VIRTUAL_LAUNCH"],
+    "governs": "Authenticated operator bulk email dispatch — filter-based recipient selection, template or custom body, dry-run preview and live send",
+    "path": "contracts/operator-bulk-email.json",
+    "source": "Virtual Launch Pro",
+    "title": "Virtual Launch Pro — Operator Contract — Bulk Email",
+    "usedOnPages": ["/operator", "/operator.html"],
+    "validation": {
+      "enumStrict": true,
+      "normalizeCheckboxToBoolean": true,
+      "rejectUnknownValues": true,
+      "requireJsonContentType": true
+    },
+    "version": 2
+  },
+  "delivery": {
+    "endpoint": "/operator/bulk-email",
+    "method": "POST",
+    "receiptKeyPattern": "receipts/operator/bulk-email/{eventId}.json",
+    "receiptSource": "operator",
+    "signature": {
+      "header": "Authorization",
+      "required": true,
+      "secretEnvVar": "OPERATOR_SESSIONS"
+    }
+  },
+  "effects": {
+    "dedupeKey": "payload.eventId",
+    "eventIdFrom": "payload.eventId",
+    "writeOrder": ["receiptAppend"],
+    "writes": ["bulk-email-receipts"],
+    "receiptAppend": {
+      "to": "receipts/operator/bulk-email/{eventId}.json"
+    },
+    "canonicalPatch": {
+      "eventId":        "{payload.eventId}",
+      "filters":        "{payload.filters}",
+      "subject":        "{payload.subject}",
+      "recipientCount": "{system.resolvedRecipientCount}",
+      "sentAt":         "{system.nowIso}",
+      "dryRun":         "{payload.dryRun}"
+    }
+  },
+  "payload": {
+    "additionalProperties": false,
+    "properties": {
+      "eventId": { "type": "string", "minLength": 1 },
+      "filters": {
+        "type": "object",
+        "description": "Recipient filter — same params as operator-submissions.json payload",
+        "properties": {
+          "status":       { "type": "string", "enum": ["pending", "active", "complete", "archived"] },
+          "cronSchedule": { "type": "string", "enum": ["3 days", "7 days", "14 days"] },
+          "publish":      { "type": "boolean" },
+          "skill":        { "type": "string" }
+        }
+      },
+      "subject":    { "type": "string", "minLength": 1, "maxLength": 200 },
+      "body":       { "type": "string", "minLength": 1, "maxLength": 10000 },
+      "templateId": { "type": "string", "description": "Optional canned response template ID — see operator-canned-responses.json" },
+      "dryRun":     { "type": "boolean", "description": "If true, return recipient count only — do not send" }
+    },
+    "required": ["eventId", "subject"],
+    "type": "object"
+  },
+  "response": {
+    "deduped": { "deduped": true, "eventId": "{effects.eventIdFrom}", "ok": true },
+    "error":   { "error": "validation_failed", "ok": false },
+    "success": {
+      "ok": true,
+      "eventId": "{effects.eventIdFrom}",
+      "recipientCount": "{system.resolvedRecipientCount}",
+      "dryRun": "{payload.dryRun}",
+      "sent": "{system.sentBoolean}"
+    }
+  },
+  "schema": {
+    "name": "vlp_operator_bulk_email",
+    "version": 1
+  },
+  "notes": {
+    "authPattern": "Bearer token — see contracts/operator-auth.json",
+    "businessRule": "Either body or templateId must be present. Worker enforces this — not expressible in JSON Schema additionalProperties alone.",
+    "dryRunBehavior": "dryRun:true returns recipientCount and sent:false without dispatching. Use for preview before live send.",
+    "templateSource": "contracts/operator-canned-responses.json (pending)"
+  }
+}

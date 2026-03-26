@@ -50,7 +50,7 @@ export async function onRequestPost({ request, env }) {
     const record = {
       ...payload,
       createdAt: now,
-      recordStatus: 'submitted',
+      status: 'pending',
       updatedAt: now
     };
 
@@ -73,7 +73,7 @@ export async function onRequestPost({ request, env }) {
       console.error('Email send failed (non-fatal):', emailErr);
     }
 
-    return json({ eventId: payload.eventId, ok: true, status: 'submitted' }, 200, CORS);
+    return json({ eventId: payload.eventId, ok: true, status: 'pending' }, 200, CORS);
 
   } catch (err) {
     console.error(err);

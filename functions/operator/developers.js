@@ -1,37 +1,12 @@
 // functions/operator/developers.js
-// GET /operator/developers — lists all dashboard records
+// Pages Function — GET /operator/developers
+// Lightweight list for operator dropdowns and filters.
+// Returns ref_number, full_name, status, publish_profile only — never full records.
+// Required bindings:
+//   KV: OPERATOR_SESSIONS — for verifyOperatorToken
+//   R2: ONBOARDING_R2 — onboarding records bucket
 
-import { verifyToken } from '../_shared/auth.js';
-
-export async function onRequestGet({ request, env }) {
-  const CORS = corsHeaders(request);
-
-  const auth = await verifyToken(request, env);
-  if (!auth.valid) return json({ ok: false, error: 'unauthorized' }, 401, CORS);
-
-  if (!env.ONBOARDING_R2) return json({ ok: true, developers: [] }, 200, CORS);
-
-  const objects = [];
-  let list = await env.ONBOARDING_R2.list({ prefix: 'dashboard-records/' });
-  objects.push(...list.objects);
-  while (list.truncated) {
-    list = await env.ONBOARDING_R2.list({ prefix: 'dashboard-records/', cursor: list.cursor });
-    objects.push(...list.objects);
-  }
-
-  const developers = [];
-  for (const obj of objects) {
-    const record = await env.ONBOARDING_R2.get(obj.key);
-    if (!record) continue;
-    try { developers.push(await record.json()); } catch { /* skip */ }
-  }
-
-  return json({ ok: true, developers }, 200, CORS);
-}
-
-export async function onRequestOptions({ request }) {
-  return new Response(null, { status: 204, headers: corsHeaders(request) });
-}
+import { verifyOperatorToken } from './_verifyToken.js';
 
 function corsHeaders(request) {
   const origin = request.headers.get('Origin') || '*';
@@ -48,4 +23,62 @@ function json(body, status, cors = {}) {
     status,
     headers: { 'Content-Type': 'application/json', ...cors }
   });
+}
+
+export async function onRequestOptions({ request }) {
+  return new Response(null, { status: 204, headers: corsHeaders(request) });
+}
+
+export async function onRequestGet({ request, env }) {
+  const CORS = corsHeaders(request);
+
+  // verifyOperatorToken first — before anything else
+  const auth = await verifyOperatorToken(request, env);
+  if (!auth.valid) {
+    return json({ ok: false, error: auth.error || 'unauthorized' }, 401, CORS);
+  }
+
+  const url          = new URL(request.url);
+  const statusFilter = url.searchParams.get('status')  || null;
+  const publishRaw   = url.searchParams.get('publish') || null;
+
+  // List all R2 records — handle R2 pagination (>1000 objects)
+  const allRecords = [];
+  let cursor;
+  do {
+    const listOpts = { prefix: 'onboarding-records/' };
+    if (cursor) listOpts.cursor = cursor;
+    const listed = await env.ONBOARDING_R2.list(listOpts);
+    const batch  = await Promise.all(
+      listed.objects.map(async (obj) => {
+        const res = await env.ONBOARDING_R2.get(obj.key);
+        if (!res) return null;
+        try { return JSON.parse(await res.text()); } catch { return null; }
+      })
+    );
+    allRecords.push(...batch.filter(Boolean));
+    cursor = listed.truncated ? listed.cursor : undefined;
+  } while (cursor);
+
+  // Apply optional filters
+  let filtered = allRecords;
+
+  if (statusFilter) {
+    filtered = filtered.filter(r => r.status === statusFilter);
+  }
+  if (publishRaw !== null) {
+    const publishBool = publishRaw === 'true';
+    filtered = filtered.filter(r => r.publish_profile === publishBool);
+  }
+
+  // Return lightweight shape only — never full records
+  return json({
+    ok:      true,
+    results: filtered.map(r => ({
+      ref_number:      r.eventId       || r.ref_number || null,
+      full_name:       r.full_name     || null,
+      status:          r.status        || null,
+      publish_profile: r.publish_profile === true
+    }))
+  }, 200, CORS);
 }

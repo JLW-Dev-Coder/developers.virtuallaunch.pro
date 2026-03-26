@@ -17,6 +17,21 @@
 - Stripe checkout session creator: `functions/forms/stripe/create-session.js` (POST)
 - Stripe webhook handler: `functions/forms/stripe/webhook.js` (POST)
 - Session status endpoint: `functions/forms/stripe/session-status.js` (GET)
+- Operator auth handler: `functions/operator/auth.js` → POST `/operator/auth` (validates `x-operator-key`, issues Bearer session token stored in OPERATOR_SESSIONS KV)
+- Operator token verification: `functions/operator/_verifyToken.js` → shared `verifyOperatorToken(request, env)` — import and call first in every operator handler
+- Operator submissions: `functions/operator/submissions.js` → GET `/operator/submissions` (filter + paginate onboarding records; verifyOperatorToken first)
+- Operator developer (single): `functions/operator/developer.js` → GET `/operator/developer?ref=VLP-xxx` + PATCH `/operator/developer` (full record + skills reshape on GET; immutable fields enforced on PATCH)
+- Operator developers (list): `functions/operator/developers.js` → GET `/operator/developers` (lightweight list: ref_number, full_name, status, publish_profile only)
+- Operator post handler: `functions/operator/post.js` → POST `/operator/post` (targeted job post to a developer record; updates nextNotificationDue per cronSchedule)
+- Operator jobs handler: `functions/operator/jobs.js` → GET/POST/PATCH `/operator/jobs` (job post CRUD; job stored in R2 `job-posts/{jobId}.json`)
+- Operator bulk email handler: `functions/operator/bulk-email.js` → POST `/operator/bulk-email` (filter-based bulk email via Gmail API; dry-run supported; receipt written to R2)
+- Operator analytics handler: `functions/operator/analytics.js` → GET `/operator/analytics` (submission counts across 4 R2 collections + Cloudflare Analytics API page views; time-bucketed metrics; CF_API_TOKEN + CF_ZONE_ID required)
+- Operator messages handler: `functions/operator/messages.js` → POST `/operator/messages` (send outbound message to developer; writes to R2 + sends email) + GET `/operator/messages?ref=VLP-xxx` (fetch full thread)
+- Operator tickets list: `functions/operator/tickets/index.js` → GET `/operator/tickets` (list support tickets from support-records/ with optional ?status filter; includes replyCount)
+- Operator ticket reply: `functions/operator/tickets/[ticketId]/reply.js` → POST `/operator/tickets/{ticketId}/reply` (append reply to ticket; update status to in_progress; send email to submitter)
+- Operator canned responses: `functions/operator/canned-responses.js` → GET `/operator/canned-responses` (list with optional ?userType filter) + POST (create new template; isDefault:false)
+- Operator canned response PATCH/DELETE: `functions/operator/canned-responses/[templateId].js` → PATCH `/operator/canned-responses/{templateId}` (edit mutable fields) + DELETE (isDefault guard — cannot delete default templates)
+- Canned response seed script: `scripts/seed-canned-responses.js` → writes 8 isDefault:true templates (4 developer + 4 client) to R2 via Cloudflare REST API
 
 ## Stripe Integration
 - Webhook endpoint: https://api.virtuallaunch.pro/v1/webhooks/stripe
@@ -63,6 +78,24 @@ The `vlp_internal` flag is read from sessionStorage only. It is never derived fr
 The coupon ID is never exposed to the client — it is read server-side from `STRIPE_INTERNAL_COUPON_ID`.
 If `STRIPE_INTERNAL_COUPON_ID` is not set in the environment, the flag is silently ignored.
 The coupon is never applied to the free plan.
+
+## Email Routing
+
+All email dispatch imports from `functions/_shared/email.js` only. Never call `gmail.js` or Resend directly from a handler.
+
+| Flow | Service | Function | Handler |
+|---|---|---|---|
+| Onboarding confirmation to user | Gmail API | `sendTransactionalEmail` | functions/forms/onboarding.js |
+| Operator post notification to developer | Gmail API | `sendTransactionalEmail` | functions/operator/post.js |
+| Support ticket reply to submitter | Gmail API | `sendTransactionalEmail` | functions/operator/messages.js |
+| Cron job match notification to developer | Resend | `sendBulkEmail` | functions/cron/job-match.js |
+| Bulk email dispatch | Resend | `sendBulkEmail` | functions/operator/bulk-email.js |
+
+- Transactional (1 recipient) → Gmail API via `sendTransactionalEmail`
+- Bulk (multiple recipients) → Resend batch API via `sendBulkEmail` (batches of 50)
+- `EMAIL_FROM = team@virtuallaunch.pro` (set in `[vars]` in `wrangler.toml`)
+- `RESEND_API_KEY` — set via `wrangler secret put RESEND_API_KEY`
+- Email failure in any handler must never cause a non-200 response
 
 ## Self-Check Rules (run before every change)
 1. Never modify webhook endpoint, secret, or event list
@@ -246,3 +279,174 @@ The coupon is never applied to the free plan.
     `package-lock.json` (name field)
   - No logic, routing behavior, or configuration changed beyond the domain string itself
   - `node_modules/.package-lock.json` skipped — auto-generated file
+
+### 2026-03-25 — Implement POST /operator/auth + verifyOperatorToken utility
+- New files:
+  - `functions/operator/auth.js` — POST `/operator/auth` Pages Function handler
+    - Validates `x-operator-key` header against `OPERATOR_KEY` env var
+    - Parses JSON body; requires `eventId` string field
+    - Deduplication via `operator-dedupe:{eventId}` KV key (TTL: 28800s)
+    - Generates session token with `crypto.randomUUID()`
+    - Writes `operator-session:{token}` to OPERATOR_SESSIONS KV (TTL: 28800s)
+    - Returns 201 on new session, 200 on dedup hit, 401 on bad key, 400 on validation fail, 405 on wrong method
+  - `functions/operator/_verifyToken.js` — shared `verifyOperatorToken(request, env)` utility
+    - Extracts Bearer token from `Authorization` header
+    - Looks up `operator-session:{token}` in OPERATOR_SESSIONS KV
+    - Checks `expiresAt`; deletes expired key and returns `{ valid: false, error: "token_expired" }`
+    - Returns `{ valid: true, token, eventId }` on success
+- Updated: `wrangler.toml` — added `[[kv_namespaces]]` block for OPERATOR_SESSIONS (id left empty; must be created in Cloudflare dashboard)
+- Updated: `contracts/registry.json` — added `handlerPath` and `handlerStatus` to operator-auth.json entry
+- Updated: `.claude/CLAUDE.md` — added Key Files entries and this audit log entry
+- FLAGS: OPERATOR_SESSIONS KV namespace ID must be created in Cloudflare dashboard and filled into `wrangler.toml`
+
+### 2026-03-25 — Implement Operator Post, Jobs, and Bulk Email Handlers
+- Files rewritten/created (post.js and jobs.js were prior stubs using old x-operator-key auth):
+  - `functions/operator/post.js` — POST `/operator/post`
+    - `verifyOperatorToken` first (import from `./_verifyToken.js`)
+    - Required: eventId, ref_number, jobTitle, jobDescription; optional: jobId
+    - Dedupe key: `operator-dedupe:post:{eventId}` in OPERATOR_SESSIONS KV (TTL 86400s)
+    - Developer record existence verified in R2 (`onboarding-records/{ref_number}.json`)
+    - Post written to R2: `operator-posts/{ref_number}/{eventId}.json`
+    - Developer's `nextNotificationDue` updated based on their `cronSchedule` (3/7/14 days ISO string)
+    - Returns: `{ ok, eventId, ref_number, notificationStatus: "queued" }`
+  - `functions/operator/jobs.js` — GET/POST/PATCH `/operator/jobs`
+    - `verifyOperatorToken` first in all three branches
+    - GET: lists R2 `job-posts/` prefix, optional `?status=open|closed` filter
+    - POST: creates job record at `job-posts/{eventId}.json`; dedupe `operator-dedupe:job:{eventId}`
+    - PATCH: extracts jobId from URL path; immutable fields: jobId, eventId, createdAt; updates updatedAt
+    - All three branches use `onRequest` catch-all with method routing
+    - R2 binding: `ONBOARDING_R2`
+  - `functions/operator/bulk-email.js` — POST `/operator/bulk-email` (new file)
+    - `verifyOperatorToken` first
+    - Required: eventId, subject; body or templateId required (400 if neither)
+    - Dedupe key: `operator-dedupe:bulk-email:{eventId}` (TTL 86400s)
+    - Template resolution: fetches `operator-canned-responses/{templateId}.json` from R2; uses template
+      subject/body as fallback (payload values take precedence)
+    - Recipient filter: status, cronSchedule, publish (boolean on publish_profile), skill (record[skill] >= 1)
+    - Email list deduplicated by address
+    - Dry run: writes receipt with dryRun:true, returns recipientCount, does NOT dispatch
+    - Live send: iterates recipients via `sendEmail` from `functions/_shared/gmail.js`; non-fatal errors logged
+    - Receipt written to R2: `receipts/operator/bulk-email/{eventId}.json`
+    - Email service: Gmail API via `functions/_shared/gmail.js` (GOOGLE_PRIVATE_KEY, GOOGLE_CLIENT_EMAIL)
+- Updated `contracts/registry.json`: added handlerPath + handlerStatus: "implemented" to all three entries
+- Updated `.claude/CLAUDE.md`: added Key Files entries and this audit log entry
+
+### 2026-03-25 — Implement Unified Email Utility (Gmail API + Resend)
+- New files:
+  - `functions/_shared/email.js` — unified email dispatch
+    - `sendTransactionalEmail(env, { to, subject, html, text, replyTo })` — wraps gmail.js `sendEmail`; catches errors; returns `{ ok, messageId }` or `{ ok: false, error }`; never throws
+    - `sendBulkEmail(env, { recipients, subject, html, text })` — Resend batch API; 50 per batch; per-batch errors collected, not thrown; returns `{ ok, sent, failed, errors }`
+    - `sendEmailDryRun(recipients)` — no API call; returns `{ ok, recipientCount, dryRun: true, sent: false }`
+  - `functions/_shared/emailTemplates.js` — HTML + plain text templates (inline styles, max-width 600px)
+    - `onboardingConfirmation({ full_name, ref_number, status })`
+    - `operatorPostNotification({ full_name, jobTitle, jobDescription, postedAt })`
+    - `cronMatchNotification({ full_name, jobTitle, jobDescription, jobId })`
+    - `supportTicketReply({ clientRef, subject, replyBody })`
+    - `bulkEmailTemplate({ full_name, subject, body })`
+- Updated `functions/operator/bulk-email.js`:
+  - Removed direct `sendEmail` from `gmail.js` import
+  - Added imports: `sendBulkEmail`, `sendEmailDryRun` from `email.js`; `bulkEmailTemplate` from `emailTemplates.js`
+  - Dry run now uses `sendEmailDryRun`
+  - Live send now uses `bulkEmailTemplate` + `sendBulkEmail` (recipients mapped to email strings)
+  - Receipt updated to include `sent` + `failed` counts from result
+- Updated `functions/operator/post.js`:
+  - Added imports: `sendTransactionalEmail` from `email.js`; `operatorPostNotification` from `emailTemplates.js`
+  - After R2 write + nextNotificationDue update: sends email via `sendTransactionalEmail`
+  - Updates `postRecord.notificationStatus` to `'sent'` or `'failed'`; writes updated record back to R2
+  - Email failure never causes non-200 response (entire block wrapped in try/catch)
+- Updated `wrangler.toml`: added `EMAIL_FROM = "team@virtuallaunch.pro"` to `[vars]`; added secret comments for RESEND_API_KEY, GOOGLE_PRIVATE_KEY, GOOGLE_CLIENT_EMAIL
+- Updated `.claude/registry.json`: added `sharedAssets` array with two entries
+- Updated `.claude/CLAUDE.md`: added Email Routing section; this audit log entry
+- Gmail API pattern: gmail.js `sendEmail(env, toEmail, subject, bodyText)` — plain text; throws on failure
+
+### 2026-03-25 — Implement Operator Submissions + Developers Handlers
+- Files rewritten (all three were prior stubs importing a non-existent `../_shared/auth.js`):
+  - `functions/operator/submissions.js` — GET /operator/submissions
+    - `verifyOperatorToken` called first (import from `./_verifyToken.js`)
+    - Filters: status (enum), type (enum), skill (skill_* field >= 1), publish (boolean), cronSchedule (enum)
+    - Pagination: page + limit (default 25, max 100); offset-based slice
+    - R2 pagination handled via `list.truncated` + `list.cursor` loop
+    - Response shape matches `contracts/operator-submissions.json`
+    - CORS headers preserved (existing pattern in operator handler directory)
+  - `functions/operator/developer.js` — GET + PATCH /operator/developer
+    - `verifyOperatorToken` called first in both export handlers
+    - GET: direct key lookup (`onboarding-records/${ref}.json`; ref == eventId)
+    - GET: skill_* keys extracted from flat record and nested under `skills` object in response
+    - GET: response shape matches `contracts/operator-developers.json` success shape
+    - PATCH: parses JSON body; requires `ref_number`; 404 if not found
+    - PATCH: strips and restores immutable fields (ref_number, email, eventId, createdAt) after merge
+    - PATCH: writes merged record back to R2 at same key; returns `{ ok, ref_number, updatedAt }`
+  - `functions/operator/developers.js` — GET /operator/developers
+    - `verifyOperatorToken` called first
+    - Optional filters: status, publish (boolean)
+    - R2 pagination handled
+    - Returns lightweight shape only: ref_number, full_name, status, publish_profile
+    - Full records never returned
+- Updated `contracts/registry.json`:
+  - operator-submissions.json entry: added `handlerPath`, `handlerStatus: "implemented"`
+  - operator-developers.json entry: added `handlerPath`, `handlerStatus: "implemented"`, `additionalHandlers`
+- Updated `CLAUDE.md` Key Files — added three handler entries
+- Note: existing stubs imported `verifyToken` from `'../_shared/auth.js'` — that file does not exist in this repo.
+  All three handlers now use `verifyOperatorToken` from `./_verifyToken.js` as required.
+
+### 2026-03-25 — Implement Analytics, Messages, Tickets, and Canned Responses handlers
+- Files rewritten/created:
+  - `functions/operator/analytics.js` — GET `/operator/analytics`
+    - Rewrote old stub (imported non-existent `../_shared/auth.js`, used stale `dashboard-records/` prefix)
+    - `verifyOperatorToken` first
+    - Parallel R2 prefix scans: `onboarding-records/`, `find-developer-records/`, `support-records/`, `review-records/`
+    - Date window filter (default: last 30 days) applied to `createdAt`/`submittedAt` field
+    - Time series bucketed by `day`, `week` (ISO week), or `month`
+    - Cloudflare Analytics GraphQL API call for page view data; graceful fallback to `{ data: null, error: "unavailable" }` on any error
+    - Response shape matches `contracts/operator-analytics.json > response.success`
+    - Required new env vars: `CF_API_TOKEN` (secret), `CF_ZONE_ID` (var)
+  - `functions/operator/messages.js` — POST + GET `/operator/messages`
+    - POST: validate `eventId`, `ref_number`, `subject`, `body`; dedupe `operator-dedupe:message:{eventId}` (TTL 86400s)
+    - POST: developer record lookup in R2; write message to `operator-messages/{ref_number}/{eventId}.json`; write receipt to `receipts/operator/messages/{eventId}.json`
+    - POST: email via `sendTransactionalEmail` using `supportTicketReply` template; catch failure silently
+    - GET: list all messages at prefix `operator-messages/{ref}/`; sort by `sentAt`; return `{ ok, ref_number, messages }`
+  - `functions/operator/tickets/index.js` — GET `/operator/tickets`
+    - `verifyOperatorToken` first
+    - Lists `support-records/` prefix; filters to top-level `.json` files only (skips reply sub-keys)
+    - Optional `?status` filter; fetches reply count per ticket via separate prefix count
+    - Returns `{ ok, results: [{ ticketId, clientRef, subject, status, submittedAt, replyCount }] }`
+  - `functions/operator/tickets/[ticketId]/reply.js` — POST `/operator/tickets/{ticketId}/reply`
+    - `verifyOperatorToken` first; `ticketId` from `context.params.ticketId`
+    - Required: `eventId`, `body`; optional: `templateId`
+    - Fetches ticket from `support-records/{ticketId}.json`; 404 if not found
+    - Writes reply to `support-records/{ticketId}/replies/{eventId}.json`
+    - Updates ticket `status` to `in_progress` if currently `open`; writes updated record back to R2
+    - Sends reply email via `sendTransactionalEmail` using `supportTicketReply` template; catches failure silently
+    - Returns `{ ok, ticketId, eventId, repliedAt }`
+  - `functions/operator/canned-responses.js` — GET + POST `/operator/canned-responses`
+    - GET: lists `operator-canned-responses/` prefix; optional `?userType` filter; returns `{ ok, templates: [...] }`
+    - POST: validates `eventId`, `userType`, `label`, `subject`, `body`; dedupe `operator-dedupe:canned:{eventId}` (TTL 86400s)
+    - POST: writes to `operator-canned-responses/{eventId}.json` with `isDefault: false`
+    - POST: returns `{ ok, templateId, eventId }` 201
+  - `functions/operator/canned-responses/[templateId].js` — PATCH + DELETE `/operator/canned-responses/{templateId}`
+    - `templateId` from `context.params.templateId`
+    - PATCH: fetches existing; merges mutable fields (`label`, `subject`, `body`, `userType`); updates `updatedAt`; writes back
+    - DELETE: fetches existing; guards `isDefault === true` → 403 `{ ok: false, error: "protected" }`; deletes R2 object
+  - `scripts/seed-canned-responses.js` — seed script for 8 default templates (4 developer + 4 client)
+    - `isDefault: true` on all — protected from DELETE
+    - Uses Cloudflare R2 REST API (`PUT /accounts/{id}/r2/buckets/{bucket}/objects/{key}`)
+    - Run: `CLOUDFLARE_ACCOUNT_ID=<id> CLOUDFLARE_API_TOKEN=<token> node scripts/seed-canned-responses.js`
+- Modified `functions/_shared/gmail.js`:
+  - Added optional `html` parameter to `sendEmail(env, toEmail, subject, bodyText, html)`
+  - If `html` provided: builds `multipart/alternative` MIME message via new `buildRawEmailHtml()` function
+  - If `html` absent: existing `text/plain` path unchanged
+  - `buildRawEmailHtml(fromEmail, fromName, toEmail, subject, htmlBody, textFallback)` — exported helper
+- Modified `functions/_shared/email.js`:
+  - `sendTransactionalEmail` now passes `html` as 5th arg to `sendEmail` so HTML templates render correctly
+- Updated `wrangler.toml`:
+  - Added `CF_ZONE_ID = ""` to `[vars]` with dashboard instruction comment
+  - Added `CF_API_TOKEN` secret comment (Analytics:Read permission required)
+- Updated `contracts/registry.json`:
+  - `operator-analytics.json` entry: added `handlerPath`, `handlerStatus: "implemented"`
+  - `operator-messages.json` entry: added `handlerPath`, `handlerStatus: "implemented"`, `additionalHandlers`
+  - `operator-canned-responses.json` entry: added `handlerPath`, `handlerStatus: "implemented"`, `additionalHandlers`
+- Updated `.claude/CLAUDE.md` Key Files section — added 10 new handler entries
+- FLAGS:
+  - `CF_ZONE_ID` must be filled in `wrangler.toml` (found in Cloudflare dashboard → Overview)
+  - `CF_API_TOKEN` must be set via `wrangler secret put CF_API_TOKEN` with Analytics:Read permission
+  - Seed script requires `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` env vars at run time

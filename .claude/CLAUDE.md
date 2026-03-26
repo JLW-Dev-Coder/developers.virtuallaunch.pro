@@ -100,6 +100,19 @@ All email dispatch imports from `functions/_shared/email.js` only. Never call `g
 - `RESEND_API_KEY` — set via `wrangler secret put RESEND_API_KEY`
 - Email failure in any handler must never cause a non-200 response
 
+## Cron Trigger Worker
+
+A standalone Cloudflare Worker (`developers-virtuallaunch-pro-api`) exists in the Cloudflare dashboard
+to drive the weekly cron schedule for the Pages project. It is not part of the Pages deployment.
+
+- **Name:** `developers-virtuallaunch-pro-api`
+- **Location:** `workers/cron-trigger/` (source-controlled; deploy separately)
+- **Schedule:** `0 9 * * 1` — Sunday 9am UTC (Cloudflare interprets day-of-week `1` as Sunday)
+- **Purpose:** Calls `POST /cron/job-match` on `developers.virtuallaunch.pro` weekly
+- **Secret required:** `CRON_SECRET` — must match `CRON_SECRET` set on the Pages project
+- **Deploy:** `wrangler deploy` from `workers/cron-trigger/` (separate from Pages deploy)
+- **Hosted on:** `jamie-williams.workers.dev`
+
 ## Self-Check Rules (run before every change)
 1. Never modify webhook endpoint, secret, or event list
 2. Never derive payment state from client-side redirect alone
@@ -540,3 +553,13 @@ All email dispatch imports from `functions/_shared/email.js` only. Never call `g
 - Now in `scripts/seed-canned-responses.js` as default canned responses (R2 storage)
 - Run `node scripts/seed-canned-responses.js` to write the 3 new templates to R2
   (Re-running is safe — uses upsert; existing templates are preserved)
+
+### 2026-03-26 — Document cron trigger Worker
+- New files (source-controlled documentation of existing dashboard Worker):
+  - `workers/cron-trigger/index.js` — Worker source; calls POST /cron/job-match weekly
+  - `workers/cron-trigger/wrangler.toml` — Worker config; name, schedule, secret comment
+- Worker details: name `developers-virtuallaunch-pro-api`, hosted on `jamie-williams.workers.dev`
+- Schedule: `0 9 * * 1` (Sunday 9am UTC — Cloudflare interprets 1 as Sunday)
+- Auth: `CRON_SECRET` env var (set in Cloudflare dashboard → Worker → Settings → Variables)
+- Updated `.claude/CLAUDE.md`: added "Cron Trigger Worker" section and this audit log entry
+- Updated `.claude/registry.json`: added `workers/cron-trigger/index.js` entry to `sharedAssets`

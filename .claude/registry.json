@@ -171,6 +171,17 @@
       "path": "functions/_shared/emailTemplates.js",
       "category": "asset",
       "governs": "HTML and plain text templates for all outbound email flows"
+    },
+    {
+      "path": "workers/cron-trigger/index.js",
+      "category": "asset",
+      "method": null,
+      "endpoint": null,
+      "title": "Cron Trigger Worker",
+      "governs": "Standalone Worker that calls POST /cron/job-match on weekly schedule (Sunday 9am UTC)",
+      "version": 1,
+      "status": "active",
+      "note": "Deployed separately as developers-virtuallaunch-pro-api on jamie-williams.workers.dev"
     }
   ],
   "dependencies": {

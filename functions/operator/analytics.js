@@ -143,6 +143,21 @@ async function fetchCloudflarePageViews(env, from, to) {
     const zone = payload?.data?.viewer?.zones?.[0] ?? {};
     const dailyGroups = zone.httpRequests1dGroups ?? [];
 
+    // DEBUG — remove after confirming data flows
+    if (dailyGroups.length === 0) {
+      return {
+        source: 'Cloudflare Analytics API',
+        data: null,
+        error: 'empty_response',
+        _debug: {
+          payloadErrors: payload.errors ?? null,
+          zonesCount: payload?.data?.viewer?.zones?.length ?? 0,
+          rawZoneKeys: zone ? Object.keys(zone) : [],
+          rawPayloadSnippet: JSON.stringify(payload).slice(0, 500)
+        }
+      };
+    }
+
     // ── Daily time series ──────────────────────────────────────────────────
     const timeSeries = dailyGroups.map(g => ({
       date:              g.dimensions.date,

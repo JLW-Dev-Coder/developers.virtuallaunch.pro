@@ -231,7 +231,7 @@ async function rAnalytics(){
   const s=data.submissions||{};
   const pv=data.pageViews||{};
   // Handler returns pageViews.data.totals / .timeSeries / .topCountries / .topBrowsers / .firewallEvents / .statusCodes
-  const pvAvail=pv.data!=null&&!pv.error;
+  const pvAvail=pv.data!=null&&pv.data!==null&&typeof pv.data==='object'&&!pv.error&&!pv._debug;
   const pvd=pvAvail?pv.data:{};
   const tot=pvd.totals||{};
   const cfTS=pvd.timeSeries||[];
@@ -248,16 +248,15 @@ async function rAnalytics(){
 
   // CF stat cards — only show what the handler actually returned
   const cfStatDefs=[
-    {k:'pageViews',       l:'Page Views',       icon:'eye',        c:'#60a5fa'},
-    {k:'requests',        l:'Total Requests',    icon:'activity',   c:'#34d399'},
-    {k:'uniqueVisitors',  l:'Unique Visitors',   icon:'user-check', c:'#a78bfa'},
-    {k:'bytes',           l:'Bandwidth',         icon:'hard-drive', c:'#fbbf24', fmt:fmtBytes},
-    {k:'cachedRequests',  l:'Cached Requests',   icon:'zap',        c:'#10b981'},
-    {k:'cachedBytes',     l:'Cached Bandwidth',  icon:'database',   c:'#6ee7b7', fmt:fmtBytes},
+    {k:'requests',         l:'Total Requests',   icon:'activity',   c:'#34d399'},
+    {k:'uniqueVisitors',   l:'Unique Visitors',  icon:'user-check', c:'#a78bfa'},
+    {k:'bytes',            l:'Bandwidth',         icon:'hard-drive', c:'#fbbf24', fmt:fmtBytes},
+    {k:'cachedRequests',   l:'Cached Requests',  icon:'zap',        c:'#10b981'},
+    {k:'cachedBytes',      l:'Cached Bandwidth', icon:'database',   c:'#6ee7b7', fmt:fmtBytes},
     {k:'encryptedRequests',l:'Encrypted Req.',   icon:'lock',       c:'#f472b6'},
-    {k:'threats',         l:'Threats Blocked',   icon:'shield',     c:'#f87171'},
+    {k:'threats',          l:'Threats Blocked',  icon:'shield',     c:'#f87171'},
   ];
-  const cfStats=cfStatDefs.filter(d=>tot[d.k]!=null&&tot[d.k]!==0).map(d=>({...d,v:d.fmt?d.fmt(tot[d.k]):tot[d.k].toLocaleString()}));
+  const cfStats=pvAvail?cfStatDefs.map(d=>({...d,v:d.fmt?d.fmt(tot[d.k]??0):(tot[d.k]??0).toLocaleString()})):[];
 
   mc.innerHTML=`<div class="p-8 fade-in">
     ${hdr('Overview','Platform metrics and submission activity')}
@@ -280,12 +279,12 @@ async function rAnalytics(){
       Cloudflare Analytics
       ${pvAvail?`<span style="font-size:.58rem;padding:1px 7px;border-radius:9999px;background:rgba(16,185,129,.1);color:#6ee7b7;border:1px solid rgba(16,185,129,.18)">LIVE</span>`:`<span style="font-size:.58rem;padding:1px 7px;border-radius:9999px;background:rgba(100,116,139,.1);color:#94a3b8;border:1px solid rgba(100,116,139,.18)">${pv.error||'CF_API_TOKEN not configured'}</span>`}
     </div>
-    ${pvAvail&&cfStats.length?`<div class="grid grid-cols-4 gap-4 mb-7">
+    ${pvAvail?`<div class="grid grid-cols-4 gap-4 mb-7">
       ${cfStats.map(c=>`<div class="vlp-card p-5 flex gap-3">
         <div class="stat-pip" style="background:linear-gradient(180deg,${c.c},${c.c}55)"></div>
         <div class="flex-1 min-w-0">
           <div class="text-[0.62rem] font-semibold uppercase tracking-widest text-slate-600 mb-2">${c.l}</div>
-          <div class="text-xl font-semibold">${c.v.toLocaleString()}</div>
+          <div class="text-xl font-semibold">${c.v}</div>
         </div>
         <i data-lucide="${c.icon}" style="width:14px;height:14px;color:${c.c};opacity:.5;flex-shrink:0;margin-top:2px"></i>
       </div>`).join('')}
@@ -319,23 +318,11 @@ async function rAnalytics(){
 
     <!-- CF daily traffic sparkline -->
     ${pvAvail&&cfTS.length?`<div class="vlp-card p-5 mb-5">
-      <div class="text-[0.62rem] font-semibold uppercase tracking-widest text-slate-600 mb-4">Cloudflare Traffic — Daily (last ${cfTS.length} days)</div>
-      <div class="grid grid-cols-2 gap-6">
-        <div>
-          <div class="text-[0.6rem] text-slate-600 mb-2">Page Views</div>
-          <div class="flex items-end gap-1 h-16">
-            ${(()=>{const maxPV=Math.max(...cfTS.map(d=>d.pageViews),1);return cfTS.map(d=>`<div class="flex-1 flex flex-col items-center gap-1"><div class="w-full rounded-t" style="height:${Math.max(Math.round(d.pageViews/maxPV*100),2)}%;background:linear-gradient(180deg,#60a5fa,#3b82f6);opacity:.7" title="${d.date}: ${d.pageViews.toLocaleString()} views"></div></div>`).join('')})()}
-          </div>
-          <div class="flex justify-between text-[0.55rem] text-slate-700 mt-1"><span>${cfTS[0]?.date?.slice(5)||''}</span><span>${cfTS[cfTS.length-1]?.date?.slice(5)||''}</span></div>
-        </div>
-        <div>
-          <div class="text-[0.6rem] text-slate-600 mb-2">Requests</div>
-          <div class="flex items-end gap-1 h-16">
-            ${(()=>{const maxR=Math.max(...cfTS.map(d=>d.requests),1);return cfTS.map(d=>`<div class="flex-1 flex flex-col items-center gap-1"><div class="w-full rounded-t" style="height:${Math.max(Math.round(d.requests/maxR*100),2)}%;background:linear-gradient(180deg,#34d399,#059669);opacity:.7" title="${d.date}: ${d.requests.toLocaleString()} requests"></div></div>`).join('')})()}
-          </div>
-          <div class="flex justify-between text-[0.55rem] text-slate-700 mt-1"><span>${cfTS[0]?.date?.slice(5)||''}</span><span>${cfTS[cfTS.length-1]?.date?.slice(5)||''}</span></div>
-        </div>
+      <div class="text-[0.62rem] font-semibold uppercase tracking-widest text-slate-600 mb-4">Cloudflare Traffic — Daily Requests (last ${cfTS.length} days)</div>
+      <div class="flex items-end gap-1 h-16">
+        ${(()=>{const maxR=Math.max(...cfTS.map(d=>d.requests),1);return cfTS.map(d=>`<div class="flex-1 flex flex-col items-center gap-1"><div class="w-full rounded-t" style="height:${Math.max(Math.round(d.requests/maxR*100),2)}%;background:linear-gradient(180deg,#34d399,#059669);opacity:.7" title="${d.date}: ${d.requests.toLocaleString()} requests"></div></div>`).join('')})()}
       </div>
+      <div class="flex justify-between text-[0.55rem] text-slate-700 mt-1.5"><span>${cfTS[0]?.date?.slice(5)||''}</span><span>${cfTS[cfTS.length-1]?.date?.slice(5)||''}</span></div>
     </div>`:''}
 
     <!-- CF breakdown tables -->

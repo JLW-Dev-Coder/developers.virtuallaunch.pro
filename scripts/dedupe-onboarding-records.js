@@ -8,88 +8,80 @@
 // Dry run runs first and prints what would be deleted.
 // You must confirm before any deletions are made.
 //
-// Env vars required:
-//   CLOUDFLARE_ACCOUNT_ID  — your Cloudflare account ID
-//   CLOUDFLARE_API_TOKEN   — token with R2:Edit permission
-//   R2_BUCKET_NAME         — defaults to "onboarding-records"
+// Requirements:
+//   - CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN env vars must be set
+//   - wrangler must be installed and authenticated (for get/delete operations)
 
 import { createInterface } from 'readline';
+import { execSync } from 'child_process';
 
-const ACCOUNT_ID  = process.env.CLOUDFLARE_ACCOUNT_ID;
-const API_TOKEN   = process.env.CLOUDFLARE_API_TOKEN;
-const BUCKET_NAME = process.env.R2_BUCKET_NAME || 'onboarding-records';
-const BASE_URL    = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/r2/buckets/${BUCKET_NAME}`;
+const BUCKET = 'onboarding-records';
 
-if (!ACCOUNT_ID || !API_TOKEN) {
-  console.error('Missing required env vars: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN');
-  process.exit(1);
-}
+// ── Wrangler helpers ───────────────────────────────────────────────────────────
 
-// ── R2 REST helpers ───────────────────────────────────────────────────────────
-
-async function listR2Objects(prefix) {
-  const objects = [];
-  let cursor    = null;
-  let truncated = true;
-
-  while (truncated) {
-    const params = new URLSearchParams({ prefix, per_page: '1000' });
-    if (cursor) params.set('cursor', cursor);
-
-    const res = await fetch(`${BASE_URL}/objects?${params}`, {
-      headers: { 'Authorization': `Bearer ${API_TOKEN}` }
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`R2 LIST failed: ${res.status} ${text}`);
-    }
-
-    const data = await res.json();
-
-    if (!data.success) {
-      throw new Error(`R2 LIST error: ${JSON.stringify(data.errors)}`);
-    }
-
-    for (const obj of (data.result?.objects || [])) {
-      objects.push(obj.key);
-    }
-
-    truncated = data.result?.truncated || false;
-    cursor    = data.result?.cursor    || null;
+// List uses the Cloudflare REST API — wrangler r2 object list does not exist in
+// Wrangler 4.x. CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN must be set.
+async function r2ListPage(prefix, cursor) {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const apiToken  = process.env.CLOUDFLARE_API_TOKEN;
+  if (!accountId || !apiToken) {
+    throw new Error('CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN must be set');
   }
 
-  return objects;
-}
+  const params = new URLSearchParams({ prefix });
+  if (cursor) params.set('cursor', cursor);
 
-async function getR2Object(key) {
-  const res = await fetch(`${BASE_URL}/objects/${encodeURIComponent(key)}`, {
-    headers: { 'Authorization': `Bearer ${API_TOKEN}` }
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${BUCKET}/objects?${params}`;
+  const res = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${apiToken}`,
+      'Content-Type':  'application/json',
+    },
   });
 
-  if (res.status === 404) return null;
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`R2 GET failed for ${key}: ${res.status} ${text}`);
+    throw new Error(`R2 list failed (${res.status}): ${text}`);
   }
 
+  const json = await res.json();
+  // CF REST API shape: { result: { objects: [...], truncated, cursor }, success, errors }
+  return json.result || json;
+}
+
+async function listObjects(prefix) {
+  const keys = [];
+  let cursor;
+
+  do {
+    const res = await r2ListPage(prefix, cursor);
+    for (const obj of (res.objects || [])) {
+      keys.push(obj.key);
+    }
+    cursor = res.truncated ? res.cursor : undefined;
+  } while (cursor);
+
+  return keys;
+}
+
+function getObject(key) {
   try {
-    return await res.json();
-  } catch {
+    const out = execSync(
+      `wrangler r2 object get ${BUCKET}/${key} --pipe`,
+      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'] }
+    );
+    return JSON.parse(out);
+  } catch (_err) {
+    // Object not found or unreadable
     return null;
   }
 }
 
-async function deleteR2Object(key) {
-  const res = await fetch(`${BASE_URL}/objects/${encodeURIComponent(key)}`, {
-    method:  'DELETE',
-    headers: { 'Authorization': `Bearer ${API_TOKEN}` }
-  });
-
-  if (!res.ok && res.status !== 404) {
-    const text = await res.text();
-    throw new Error(`R2 DELETE failed for ${key}: ${res.status} ${text}`);
-  }
+function deleteObject(key) {
+  execSync(
+    `wrangler r2 object delete ${BUCKET}/${key}`,
+    { encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'] }
+  );
 }
 
 // ── Prompt helper ─────────────────────────────────────────────────────────────
@@ -107,10 +99,10 @@ function prompt(question) {
 // ── main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log(`\nScanning R2 bucket "${BUCKET_NAME}" for duplicate onboarding records...\n`);
+  console.log(`\nScanning R2 bucket "${BUCKET}" for duplicate onboarding records...\n`);
 
   // 1. List all onboarding record keys
-  const keys = await listR2Objects('onboarding-records/');
+  const keys = await listObjects('onboarding-records/');
   console.log(`Found ${keys.length} object(s) under onboarding-records/\n`);
 
   if (keys.length === 0) {
@@ -127,7 +119,7 @@ async function main() {
     const key = keys[i];
     process.stdout.write(`  [${i + 1}/${keys.length}] ${key} ... `);
 
-    const record = await getR2Object(key);
+    const record = getObject(key);
     if (!record) {
       console.log('(skipped — null or unreadable)');
       fetchErrors++;
@@ -149,7 +141,7 @@ async function main() {
       full_name: record.full_name || '(unknown)'
     });
 
-    console.log(`ok`);
+    console.log('ok');
   }
 
   console.log(`\nFetched ${records.length} readable record(s). ${fetchErrors} skipped.\n`);
@@ -194,7 +186,7 @@ async function main() {
 
   // 5. Dry run summary
   console.log('─'.repeat(60));
-  console.log(`DRY RUN SUMMARY`);
+  console.log('DRY RUN SUMMARY');
   console.log('─'.repeat(60));
   console.log(`Records to delete:         ${toDelete.length}`);
   console.log(`Receipts to delete:        ${toDelete.filter(d => d.eventId).length}  (receipts/form/{eventId}.json)`);
@@ -217,14 +209,14 @@ async function main() {
 
   // 6. Delete confirmed
   console.log('\nDeleting...\n');
-  let deleted   = 0;
-  let receipts  = 0;
-  let errors    = 0;
+  let deleted  = 0;
+  let receipts = 0;
+  let errors   = 0;
 
   for (const d of toDelete) {
     // Delete main record
     try {
-      await deleteR2Object(d.key);
+      deleteObject(d.key);
       console.log(`  ✓  deleted ${d.key}`);
       deleted++;
     } catch (err) {
@@ -236,7 +228,7 @@ async function main() {
     if (d.eventId) {
       const receiptKey = `receipts/form/${d.eventId}.json`;
       try {
-        await deleteR2Object(receiptKey);
+        deleteObject(receiptKey);
         console.log(`  ✓  deleted ${receiptKey}`);
         receipts++;
       } catch (err) {
@@ -247,7 +239,7 @@ async function main() {
   }
 
   console.log('\n' + '─'.repeat(60));
-  console.log(`Done.`);
+  console.log('Done.');
   console.log(`  Records deleted:  ${deleted}`);
   console.log(`  Receipts deleted: ${receipts}`);
   console.log(`  Errors:           ${errors}`);

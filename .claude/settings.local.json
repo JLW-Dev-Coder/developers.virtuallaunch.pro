@@ -5,7 +5,11 @@
       "Read(//etc/**)",
       "Bash(npm install:*)",
       "Bash(node -e \"console.log\\(require\\(''./node_modules/stripe/package.json''\\).version\\)\")",
-      "Bash(python -:*)"
+      "Bash(python -:*)",
+      "Bash(node -e \"const p = require\\(''./package.json''\\); console.log\\(JSON.stringify\\(p.dependencies, null, 2\\)\\); console.log\\(JSON.stringify\\(p.devDependencies, null, 2\\)\\);\")",
+      "Bash(wrangler --version)",
+      "Bash(wrangler r2:*)",
+      "Bash(node -e \"import\\(''wrangler''\\).then\\(m => console.log\\(Object.keys\\(m\\)\\)\\).catch\\(e => console.error\\(e.message\\)\\)\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\britn\\OneDrive\\developers.virtuallaunch.pro\\functions\\operator\\tickets"

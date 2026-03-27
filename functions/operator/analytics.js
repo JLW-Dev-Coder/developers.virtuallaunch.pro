@@ -91,10 +91,10 @@ async function fetchCloudflarePageViews(env, from, to) {
   // plus per-country and per-browser breakdowns via the same dataset.
   const query = `{
     viewer {
-      zones(filter: { zoneTag: $zoneId }) {
+      zones(filter: { zoneTag: "${env.CF_ZONE_ID}" }) {
         httpRequests1dGroups(
           limit: 30
-          filter: { date_geq: $from, date_leq: $to }
+          filter: { date_geq: "${from}", date_leq: "${to}" }
           orderBy: [date_ASC]
         ) {
           dimensions { date }
@@ -124,10 +124,7 @@ async function fetchCloudflarePageViews(env, from, to) {
         'Authorization': `Bearer ${env.CF_API_TOKEN}`,
         'Content-Type':  'application/json'
       },
-      body: JSON.stringify({
-        query,
-        variables: { zoneId: env.CF_ZONE_ID, from, to }
-      })
+      body: JSON.stringify({ query })
     });
 
     if (!res.ok) {

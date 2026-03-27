@@ -86,78 +86,36 @@ async function fetchCloudflarePageViews(env, from, to) {
     return { source: 'Cloudflare Analytics API', data: null, error: 'unavailable' };
   }
 
-  // Full query — every metric available in httpRequests1dGroups
-  const query = `
-    query GetZoneAnalytics($zoneId: String!, $from: Date!, $to: Date!) {
-      viewer {
-        zones(filter: { zoneTag: $zoneId }) {
-
-          # Daily totals — requests, pageViews, bandwidth, threats, unique visitors
-          httpRequests1dGroups(
-            limit: 30
-            filter: { date_geq: $from, date_leq: $to }
-            orderBy: [date_ASC]
-          ) {
-            dimensions { date }
-            sum {
-              requests
-              pageViews
-              bytes
-              cachedBytes
-              cachedRequests
-              encryptedRequests
-              encryptedBytes
-              threats
-            }
-            uniq {
-              uniques
-            }
-          }
-
-          # Top countries by requests
-          topCountries: httpRequests1dGroups(
-            limit: 10
-            filter: { date_geq: $from, date_leq: $to }
-            orderBy: [sum_requests_DESC]
-          ) {
-            dimensions { clientCountryName }
-            sum { requests pageViews }
-          }
-
-          # Top browsers
-          topBrowsers: browserMap(
-            limit: 10
-            filter: { date_geq: $from, date_leq: $to }
-            orderBy: [pageViews_DESC]
-          ) {
-            uaBrowserFamily
+  // Single httpRequests1dGroups query — available on all Cloudflare plan tiers.
+  // Fetches daily breakdown with every sum/uniq field the endpoint supports,
+  // plus per-country and per-browser breakdowns via the same dataset.
+  const query = `{
+    viewer {
+      zones(filter: { zoneTag: $zoneId }) {
+        httpRequests1dGroups(
+          limit: 30
+          filter: { date_geq: $from, date_leq: $to }
+          orderBy: [date_ASC]
+        ) {
+          dimensions { date }
+          sum {
+            requests
             pageViews
+            bytes
+            cachedBytes
+            cachedRequests
+            encryptedRequests
+            encryptedBytes
+            threats
+            countryMap { clientCountryName requests pageViews }
+            browserMap { uaBrowserFamily requests pageViews }
+            responseStatusMap { edgeResponseStatus requests }
           }
-
-          # Firewall / threat events
-          firewallEventsAdaptiveGroups(
-            limit: 5
-            filter: { datetime_geq: "${from}T00:00:00Z", datetime_leq: "${to}T23:59:59Z" }
-            orderBy: [count_DESC]
-          ) {
-            count
-            dimensions { action clientCountryName }
-          }
-
-          # HTTP status code breakdown
-          httpRequests1dGroups(
-            limit: 30
-            filter: { date_geq: $from, date_leq: $to }
-            orderBy: [date_ASC]
-          ) {
-            dimensions { date }
-            sum { responseStatusMap { edgeResponseStatus requests } }
-          }
-
+          uniq { uniques }
         }
       }
     }
-  `;
+  }`;
 
   try {
     const res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
@@ -186,9 +144,9 @@ async function fetchCloudflarePageViews(env, from, to) {
     }
 
     const zone = payload?.data?.viewer?.zones?.[0] ?? {};
+    const dailyGroups = zone.httpRequests1dGroups ?? [];
 
     // ── Daily time series ──────────────────────────────────────────────────
-    const dailyGroups = zone.httpRequests1dGroups ?? [];
     const timeSeries = dailyGroups.map(g => ({
       date:              g.dimensions.date,
       requests:          g.sum?.requests          ?? 0,
@@ -220,53 +178,54 @@ async function fetchCloudflarePageViews(env, from, to) {
       threats: 0, uniqueVisitors: 0
     });
 
-    // ── Top countries ──────────────────────────────────────────────────────
-    // Dedupe and aggregate by country from topCountries alias
-    const countryMap = {};
-    (zone.topCountries ?? []).forEach(g => {
-      const country = g.dimensions?.clientCountryName ?? 'Unknown';
-      if (!countryMap[country]) countryMap[country] = { country, requests: 0, pageViews: 0 };
-      countryMap[country].requests  += g.sum?.requests  ?? 0;
-      countryMap[country].pageViews += g.sum?.pageViews ?? 0;
+    // ── Top countries — aggregate countryMap across all daily groups ───────
+    const countryAgg = {};
+    dailyGroups.forEach(g => {
+      (g.sum?.countryMap ?? []).forEach(row => {
+        const c = row.clientCountryName || 'Unknown';
+        if (!countryAgg[c]) countryAgg[c] = { country: c, requests: 0, pageViews: 0 };
+        countryAgg[c].requests  += row.requests  ?? 0;
+        countryAgg[c].pageViews += row.pageViews ?? 0;
+      });
     });
-    const topCountries = Object.values(countryMap)
+    const topCountries = Object.values(countryAgg)
       .sort((a, b) => b.requests - a.requests)
       .slice(0, 10);
 
-    // ── Top browsers ───────────────────────────────────────────────────────
-    const topBrowsers = (zone.topBrowsers ?? [])
-      .map(b => ({ browser: b.uaBrowserFamily, pageViews: b.pageViews }))
+    // ── Top browsers — aggregate browserMap across all daily groups ────────
+    const browserAgg = {};
+    dailyGroups.forEach(g => {
+      (g.sum?.browserMap ?? []).forEach(row => {
+        const b = row.uaBrowserFamily || 'Unknown';
+        if (!browserAgg[b]) browserAgg[b] = { browser: b, requests: 0, pageViews: 0 };
+        browserAgg[b].requests  += row.requests  ?? 0;
+        browserAgg[b].pageViews += row.pageViews ?? 0;
+      });
+    });
+    const topBrowsers = Object.values(browserAgg)
       .sort((a, b) => b.pageViews - a.pageViews)
       .slice(0, 8);
 
-    // ── Firewall events ────────────────────────────────────────────────────
-    const firewallEvents = (zone.firewallEventsAdaptiveGroups ?? [])
-      .map(e => ({
-        action:  e.dimensions?.action ?? 'unknown',
-        country: e.dimensions?.clientCountryName ?? 'Unknown',
-        count:   e.count ?? 0
-      }));
-
-    // ── Status code breakdown (aggregate across window) ────────────────────
-    const statusMap = {};
+    // ── Status code breakdown — aggregate responseStatusMap ────────────────
+    const statusAgg = {};
     dailyGroups.forEach(g => {
       (g.sum?.responseStatusMap ?? []).forEach(s => {
         const code = s.edgeResponseStatus;
-        statusMap[code] = (statusMap[code] ?? 0) + (s.requests ?? 0);
+        statusAgg[code] = (statusAgg[code] ?? 0) + (s.requests ?? 0);
       });
     });
-    const statusCodes = Object.entries(statusMap)
+    const statusCodes = Object.entries(statusAgg)
       .map(([code, requests]) => ({ code: parseInt(code), requests }))
       .sort((a, b) => b.requests - a.requests);
 
     return {
-      source:         'Cloudflare Analytics API',
+      source: 'Cloudflare Analytics API',
       data: {
         totals,
         timeSeries,
         topCountries,
         topBrowsers,
-        firewallEvents,
+        firewallEvents: [], // requires Enterprise plan
         statusCodes,
       }
     };

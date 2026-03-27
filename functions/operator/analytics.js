@@ -42,19 +42,13 @@ function inWindow(createdAt, from, to) {
   return d >= from && d <= to;
 }
 
-/**
- * Return a bucket label for a given ISO date string.
- * bucket: 'day' → 'YYYY-MM-DD', 'week' → 'YYYY-Www', 'month' → 'YYYY-MM'
- */
 function bucketLabel(isoDate, bucket) {
   const d = new Date(isoDate);
   if (bucket === 'month') return isoDate.slice(0, 7);
   if (bucket === 'week') {
-    // ISO week: find Monday of the week
-    const day  = d.getUTCDay() || 7;            // Sun→7
+    const day  = d.getUTCDay() || 7;
     const mon  = new Date(d);
     mon.setUTCDate(d.getUTCDate() - (day - 1));
-    // ISO week number
     const jan4 = new Date(Date.UTC(mon.getUTCFullYear(), 0, 4));
     const wk   = Math.ceil(((mon - jan4) / 86400000 + jan4.getUTCDay() + 1) / 7);
     return `${mon.getUTCFullYear()}-W${String(wk).padStart(2, '0')}`;
@@ -64,10 +58,6 @@ function bucketLabel(isoDate, bucket) {
 
 // ── R2 prefix scan ────────────────────────────────────────────────────────────
 
-/**
- * Fetch all objects under a prefix from R2 and return parsed records.
- * Gracefully returns [] if the prefix has no objects.
- */
 async function listRecords(r2, prefix) {
   const records = [];
   try {
@@ -77,20 +67,15 @@ async function listRecords(r2, prefix) {
       list = await r2.list({ prefix, cursor: list.cursor });
       objects.push(...list.objects);
     }
-
     for (const obj of objects) {
       try {
         const item = await r2.get(obj.key);
         if (!item) continue;
         const rec = await item.json();
         records.push(rec);
-      } catch {
-        // skip unparseable record
-      }
+      } catch { /* skip unparseable */ }
     }
-  } catch {
-    // prefix not found or R2 error — return empty
-  }
+  } catch { /* prefix not found or R2 error */ }
   return records;
 }
 
@@ -101,20 +86,78 @@ async function fetchCloudflarePageViews(env, from, to) {
     return { source: 'Cloudflare Analytics API', data: null, error: 'unavailable' };
   }
 
-  const query = `{
-  viewer {
-    zones(filter: { zoneTag: $zoneId }) {
-      httpRequests1dGroups(
-        limit: 30
-        filter: { date_geq: $from, date_leq: $to }
-        orderBy: [date_ASC]
-      ) {
-        dimensions { date }
-        sum { requests pageViews }
+  // Full query — every metric available in httpRequests1dGroups
+  const query = `
+    query GetZoneAnalytics($zoneId: String!, $from: Date!, $to: Date!) {
+      viewer {
+        zones(filter: { zoneTag: $zoneId }) {
+
+          # Daily totals — requests, pageViews, bandwidth, threats, unique visitors
+          httpRequests1dGroups(
+            limit: 30
+            filter: { date_geq: $from, date_leq: $to }
+            orderBy: [date_ASC]
+          ) {
+            dimensions { date }
+            sum {
+              requests
+              pageViews
+              bytes
+              cachedBytes
+              cachedRequests
+              encryptedRequests
+              encryptedBytes
+              threats
+            }
+            uniq {
+              uniques
+            }
+          }
+
+          # Top countries by requests
+          topCountries: httpRequests1dGroups(
+            limit: 10
+            filter: { date_geq: $from, date_leq: $to }
+            orderBy: [sum_requests_DESC]
+          ) {
+            dimensions { clientCountryName }
+            sum { requests pageViews }
+          }
+
+          # Top browsers
+          topBrowsers: browserMap(
+            limit: 10
+            filter: { date_geq: $from, date_leq: $to }
+            orderBy: [pageViews_DESC]
+          ) {
+            uaBrowserFamily
+            pageViews
+          }
+
+          # Firewall / threat events
+          firewallEventsAdaptiveGroups(
+            limit: 5
+            filter: { datetime_geq: "${from}T00:00:00Z", datetime_leq: "${to}T23:59:59Z" }
+            orderBy: [count_DESC]
+          ) {
+            count
+            dimensions { action clientCountryName }
+          }
+
+          # HTTP status code breakdown
+          httpRequests1dGroups(
+            limit: 30
+            filter: { date_geq: $from, date_leq: $to }
+            orderBy: [date_ASC]
+          ) {
+            dimensions { date }
+            sum { responseStatusMap { edgeResponseStatus requests } }
+          }
+
+        }
       }
     }
-  }
-}`;
+  `;
 
   try {
     const res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
@@ -130,27 +173,106 @@ async function fetchCloudflarePageViews(env, from, to) {
     });
 
     if (!res.ok) {
-      console.error('Cloudflare Analytics API HTTP error:', res.status);
-      return { source: 'Cloudflare Analytics API', data: null, error: 'unavailable' };
+      console.error('CF Analytics HTTP error:', res.status);
+      return { source: 'Cloudflare Analytics API', data: null, error: 'cf_http_error' };
     }
 
     const payload = await res.json();
 
-    if (payload.errors && payload.errors.length > 0) {
-      console.error('Cloudflare Analytics API errors:', JSON.stringify(payload.errors));
-      return { source: 'Cloudflare Analytics API', data: null, error: 'unavailable' };
+    if (payload.errors?.length) {
+      console.error('CF Analytics GraphQL errors:', JSON.stringify(payload.errors));
+      // Return partial data if available, with error note
+      // Fall through to attempt data extraction
     }
 
-    const groups = payload?.data?.viewer?.zones?.[0]?.httpRequests1dGroups ?? [];
-    const data   = groups.map(g => ({
-      date:      g.dimensions.date,
-      requests:  g.sum.requests,
-      pageViews: g.sum.pageViews
+    const zone = payload?.data?.viewer?.zones?.[0] ?? {};
+
+    // ── Daily time series ──────────────────────────────────────────────────
+    const dailyGroups = zone.httpRequests1dGroups ?? [];
+    const timeSeries = dailyGroups.map(g => ({
+      date:              g.dimensions.date,
+      requests:          g.sum?.requests          ?? 0,
+      pageViews:         g.sum?.pageViews          ?? 0,
+      bytes:             g.sum?.bytes              ?? 0,
+      cachedBytes:       g.sum?.cachedBytes        ?? 0,
+      cachedRequests:    g.sum?.cachedRequests      ?? 0,
+      encryptedRequests: g.sum?.encryptedRequests   ?? 0,
+      encryptedBytes:    g.sum?.encryptedBytes      ?? 0,
+      threats:           g.sum?.threats             ?? 0,
+      uniques:           g.uniq?.uniques            ?? 0,
     }));
 
-    return { source: 'Cloudflare Analytics API', data };
+    // ── Aggregate totals across window ─────────────────────────────────────
+    const totals = timeSeries.reduce((acc, d) => {
+      acc.requests          += d.requests;
+      acc.pageViews         += d.pageViews;
+      acc.bytes             += d.bytes;
+      acc.cachedBytes       += d.cachedBytes;
+      acc.cachedRequests    += d.cachedRequests;
+      acc.encryptedRequests += d.encryptedRequests;
+      acc.encryptedBytes    += d.encryptedBytes;
+      acc.threats           += d.threats;
+      acc.uniqueVisitors    += d.uniques;
+      return acc;
+    }, {
+      requests: 0, pageViews: 0, bytes: 0, cachedBytes: 0,
+      cachedRequests: 0, encryptedRequests: 0, encryptedBytes: 0,
+      threats: 0, uniqueVisitors: 0
+    });
+
+    // ── Top countries ──────────────────────────────────────────────────────
+    // Dedupe and aggregate by country from topCountries alias
+    const countryMap = {};
+    (zone.topCountries ?? []).forEach(g => {
+      const country = g.dimensions?.clientCountryName ?? 'Unknown';
+      if (!countryMap[country]) countryMap[country] = { country, requests: 0, pageViews: 0 };
+      countryMap[country].requests  += g.sum?.requests  ?? 0;
+      countryMap[country].pageViews += g.sum?.pageViews ?? 0;
+    });
+    const topCountries = Object.values(countryMap)
+      .sort((a, b) => b.requests - a.requests)
+      .slice(0, 10);
+
+    // ── Top browsers ───────────────────────────────────────────────────────
+    const topBrowsers = (zone.topBrowsers ?? [])
+      .map(b => ({ browser: b.uaBrowserFamily, pageViews: b.pageViews }))
+      .sort((a, b) => b.pageViews - a.pageViews)
+      .slice(0, 8);
+
+    // ── Firewall events ────────────────────────────────────────────────────
+    const firewallEvents = (zone.firewallEventsAdaptiveGroups ?? [])
+      .map(e => ({
+        action:  e.dimensions?.action ?? 'unknown',
+        country: e.dimensions?.clientCountryName ?? 'Unknown',
+        count:   e.count ?? 0
+      }));
+
+    // ── Status code breakdown (aggregate across window) ────────────────────
+    const statusMap = {};
+    dailyGroups.forEach(g => {
+      (g.sum?.responseStatusMap ?? []).forEach(s => {
+        const code = s.edgeResponseStatus;
+        statusMap[code] = (statusMap[code] ?? 0) + (s.requests ?? 0);
+      });
+    });
+    const statusCodes = Object.entries(statusMap)
+      .map(([code, requests]) => ({ code: parseInt(code), requests }))
+      .sort((a, b) => b.requests - a.requests);
+
+    return {
+      source:         'Cloudflare Analytics API',
+      data: {
+        totals,
+        timeSeries,
+        topCountries,
+        topBrowsers,
+        firewallEvents,
+        statusCodes,
+      }
+    };
+
   } catch (err) {
-    console.error('Cloudflare Analytics API fetch failed:', err.message);
+    console.error('CF Analytics fetch failed:', err.message);
     return { source: 'Cloudflare Analytics API', data: null, error: 'unavailable' };
   }
 }
@@ -173,7 +295,6 @@ export async function onRequestGet({ request, env }) {
   const bucket  = ['day', 'week', 'month'].includes(params.get('bucket'))
     ? params.get('bucket') : 'day';
 
-  // Fetch R2 records + Cloudflare Analytics in parallel
   const [onboardingRecs, findDevRecs, supportRecs, reviewRecs, pageViews] =
     await Promise.all([
       listRecords(env.ONBOARDING_R2, 'onboarding-records/'),
@@ -183,7 +304,6 @@ export async function onRequestGet({ request, env }) {
       fetchCloudflarePageViews(env, from, to)
     ]);
 
-  // Filter to date window
   const inW = r => inWindow(r.createdAt || r.submittedAt || r.eventId, from, to);
 
   const onboardingFiltered  = onboardingRecs.filter(inW);
@@ -191,17 +311,15 @@ export async function onRequestGet({ request, env }) {
   const supportFiltered     = supportRecs.filter(inW);
   const reviewsFiltered     = reviewRecs.filter(inW);
 
-  // Aggregate totals
   const submissions = {
     onboarding:     onboardingFiltered.length,
     findDevelopers: findDevFiltered.length,
     support:        supportFiltered.length,
     reviews:        reviewsFiltered.length,
     total:          onboardingFiltered.length + findDevFiltered.length +
-                    supportFiltered.length + reviewsFiltered.length
+                    supportFiltered.length    + reviewsFiltered.length
   };
 
-  // Build time series
   const bucketMap = {};
   const addToBucket = (recs, field) => {
     for (const r of recs) {

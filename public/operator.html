@@ -230,69 +230,34 @@ async function rAnalytics(){
   if(!data.ok){toast('Failed to load analytics','error');return}
   const s=data.submissions||{};
   const pv=data.pageViews||{};
-  const pvData=pv.data&&typeof pv.data==='object'?pv.data:{};
-  const pvAvail=pv.data&&pv.data!==null&&!pv.error;
+  // Handler returns pageViews.data.totals / .timeSeries / .topCountries / .topBrowsers / .firewallEvents / .statusCodes
+  const pvAvail=pv.data!=null&&!pv.error;
+  const pvd=pvAvail?pv.data:{};
+  const tot=pvd.totals||{};
+  const cfTS=pvd.timeSeries||[];
+  const topCountries=pvd.topCountries||[];
+  const topBrowsers=pvd.topBrowsers||[];
+  const firewallEvents=pvd.firewallEvents||[];
+  const statusCodes=pvd.statusCodes||[];
+
+  function fmtBytes(b){if(!b)return'0 B';const u=['B','KB','MB','GB','TB'];let i=0;let v=b;while(v>=1024&&i<u.length-1){v/=1024;i++}return v.toFixed(i?1:0)+' '+u[i]}
+
   const cards=[{l:'Onboarding',v:s.onboarding??0,icon:'inbox',c:'#10b981'},{l:'Find Developers',v:s.findDevelopers??0,icon:'users',c:'#60a5fa'},{l:'Support',v:s.support??0,icon:'life-buoy',c:'#fbbf24'},{l:'Reviews',v:s.reviews??0,icon:'star',c:'#a78bfa'}];
   const ts=(data.timeSeries||[]).slice(-7);
   const mx=Math.max(...ts.map(t=>(t.onboarding||0)+(t.findDevelopers||0)+(t.support||0)+(t.reviews||0)),1);
 
-  // Extract CF metrics — handles both flat object and nested viewer/httpRequests shapes
-  function cfMetric(key,fallback='—'){
-    if(!pvAvail)return fallback;
-    const d=pvData;
-    // try top-level
-    if(d[key]!==undefined)return typeof d[key]==='number'?d[key].toLocaleString():d[key];
-    // try viewer.budget / viewer.zones shape
-    const z=d.viewer?.zones?.[0];
-    if(z&&z[key]!==undefined)return typeof z[key]==='number'?z[key].toLocaleString():z[key];
-    // try httpRequests1dGroups sum
-    const groups=z?.httpRequests1dGroups||z?.httpRequests1hGroups||[];
-    if(groups.length){
-      const sums=groups.reduce((acc,g)=>{const agg=g.sum||g.uniq||{};Object.keys(agg).forEach(k=>{acc[k]=(acc[k]||0)+(agg[k]||0)});return acc},{});
-      if(sums[key]!==undefined)return sums[key].toLocaleString();
-      const dims=groups[0]?.dimensions||{};
-      if(dims[key]!==undefined)return dims[key];
-    }
-    return fallback;
-  }
-
-  // Build CF stat cards from whatever is available
-  function cfNum(key){
-    if(!pvAvail)return null;
-    const d=pvData;
-    if(typeof d[key]==='number')return d[key];
-    const z=d.viewer?.zones?.[0];
-    if(z&&typeof z[key]==='number')return z[key];
-    const groups=z?.httpRequests1dGroups||z?.httpRequests1hGroups||[];
-    if(groups.length){
-      const total=groups.reduce((acc,g)=>{const v=(g.sum||g.uniq||{})[key];return acc+(typeof v==='number'?v:0)},0);
-      if(total>0)return total;
-    }
-    return null;
-  }
-
-  const cfStats=[];
-  const cfKeys=[
-    {k:'pageViews',l:'Page Views',icon:'eye',c:'#60a5fa'},
-    {k:'visits',l:'Unique Visits',icon:'users',c:'#a78bfa'},
-    {k:'requests',l:'Total Requests',icon:'activity',c:'#34d399'},
-    {k:'bytes',l:'Bandwidth',icon:'hard-drive',c:'#fbbf24'},
-    {k:'cachedRequests',l:'Cached Requests',icon:'zap',c:'#10b981'},
-    {k:'encryptedRequests',l:'Encrypted Req.',icon:'lock',c:'#f472b6'},
-    {k:'threats',l:'Threats Blocked',icon:'shield',c:'#f87171'},
-    {k:'uniqueVisitors',l:'Unique Visitors',icon:'user-check',c:'#818cf8'},
+  // CF stat cards — only show what the handler actually returned
+  const cfStatDefs=[
+    {k:'pageViews',       l:'Page Views',       icon:'eye',        c:'#60a5fa'},
+    {k:'requests',        l:'Total Requests',    icon:'activity',   c:'#34d399'},
+    {k:'uniqueVisitors',  l:'Unique Visitors',   icon:'user-check', c:'#a78bfa'},
+    {k:'bytes',           l:'Bandwidth',         icon:'hard-drive', c:'#fbbf24', fmt:fmtBytes},
+    {k:'cachedRequests',  l:'Cached Requests',   icon:'zap',        c:'#10b981'},
+    {k:'cachedBytes',     l:'Cached Bandwidth',  icon:'database',   c:'#6ee7b7', fmt:fmtBytes},
+    {k:'encryptedRequests',l:'Encrypted Req.',   icon:'lock',       c:'#f472b6'},
+    {k:'threats',         l:'Threats Blocked',   icon:'shield',     c:'#f87171'},
   ];
-  cfKeys.forEach(({k,l,icon,c})=>{
-    const v=cfNum(k);
-    if(v!==null)cfStats.push({l,v,icon,c,raw:v});
-  });
-
-  // Also try to extract top pages / countries if present
-  const z=pvAvail?(pvData.viewer?.zones?.[0]||{}):null;
-  const topPages=z?.topPaths||z?.topPathsWithRequests||pvData.topPages||[];
-  const topCountries=z?.topCountries||pvData.topCountries||[];
-  const topBrowsers=z?.topBrowsers||pvData.topBrowsers||[];
-  const topOS=z?.topOperatingSystems||pvData.topOperatingSystems||[];
+  const cfStats=cfStatDefs.filter(d=>tot[d.k]!=null&&tot[d.k]!==0).map(d=>({...d,v:d.fmt?d.fmt(tot[d.k]):tot[d.k].toLocaleString()}));
 
   mc.innerHTML=`<div class="p-8 fade-in">
     ${hdr('Overview','Platform metrics and submission activity')}
@@ -352,32 +317,76 @@ async function rAnalytics(){
       </div>
     </div>
 
-    <!-- CF breakdown tables (only if data present) -->
-    ${(topPages.length||topCountries.length||topBrowsers.length||topOS.length)?`<div class="grid grid-cols-2 gap-5">
+    <!-- CF daily traffic sparkline -->
+    ${pvAvail&&cfTS.length?`<div class="vlp-card p-5 mb-5">
+      <div class="text-[0.62rem] font-semibold uppercase tracking-widest text-slate-600 mb-4">Cloudflare Traffic — Daily (last ${cfTS.length} days)</div>
+      <div class="grid grid-cols-2 gap-6">
+        <div>
+          <div class="text-[0.6rem] text-slate-600 mb-2">Page Views</div>
+          <div class="flex items-end gap-1 h-16">
+            ${(()=>{const maxPV=Math.max(...cfTS.map(d=>d.pageViews),1);return cfTS.map(d=>`<div class="flex-1 flex flex-col items-center gap-1"><div class="w-full rounded-t" style="height:${Math.max(Math.round(d.pageViews/maxPV*100),2)}%;background:linear-gradient(180deg,#60a5fa,#3b82f6);opacity:.7" title="${d.date}: ${d.pageViews.toLocaleString()} views"></div></div>`).join('')})()}
+          </div>
+          <div class="flex justify-between text-[0.55rem] text-slate-700 mt-1"><span>${cfTS[0]?.date?.slice(5)||''}</span><span>${cfTS[cfTS.length-1]?.date?.slice(5)||''}</span></div>
+        </div>
+        <div>
+          <div class="text-[0.6rem] text-slate-600 mb-2">Requests</div>
+          <div class="flex items-end gap-1 h-16">
+            ${(()=>{const maxR=Math.max(...cfTS.map(d=>d.requests),1);return cfTS.map(d=>`<div class="flex-1 flex flex-col items-center gap-1"><div class="w-full rounded-t" style="height:${Math.max(Math.round(d.requests/maxR*100),2)}%;background:linear-gradient(180deg,#34d399,#059669);opacity:.7" title="${d.date}: ${d.requests.toLocaleString()} requests"></div></div>`).join('')})()}
+          </div>
+          <div class="flex justify-between text-[0.55rem] text-slate-700 mt-1"><span>${cfTS[0]?.date?.slice(5)||''}</span><span>${cfTS[cfTS.length-1]?.date?.slice(5)||''}</span></div>
+        </div>
+      </div>
+    </div>`:''}
+
+    <!-- CF breakdown tables -->
+    ${(topCountries.length||topBrowsers.length||firewallEvents.length||statusCodes.length)?`<div class="grid grid-cols-2 gap-5">
+
       ${topCountries.length?`<div class="vlp-card p-5">
         <div class="text-[0.62rem] font-semibold uppercase tracking-widest text-slate-600 mb-4">Top Countries</div>
         <div class="space-y-2">
-          ${topCountries.slice(0,8).map((row,i)=>{const country=row.clientCountryName||row.country||row.dimensions?.clientCountryName||'Unknown';const visits=row.sum?.visits||row.visits||row.count||0;const maxV=topCountries[0]?.sum?.visits||topCountries[0]?.visits||topCountries[0]?.count||1;return`<div class="flex items-center gap-2.5"><span class="text-[0.68rem] text-slate-500 w-4 text-right">${i+1}</span><span class="text-[0.72rem] text-slate-300 flex-1 truncate">${country}</span><div class="skill-bar w-20"><div class="skill-fill" style="width:${Math.round(visits/maxV*100)}%;background:#60a5fa88"></div></div><span class="text-[0.68rem] text-slate-500 w-10 text-right">${typeof visits==='number'?visits.toLocaleString():visits}</span></div>`}).join('')}
+          ${topCountries.slice(0,8).map((row,i)=>{const maxR=topCountries[0]?.requests||1;return`<div class="flex items-center gap-2.5">
+            <span class="text-[0.62rem] text-slate-600 w-4 text-right">${i+1}</span>
+            <span class="text-[0.72rem] text-slate-300 flex-1 truncate">${row.country||'Unknown'}</span>
+            <div class="skill-bar w-20"><div class="skill-fill" style="width:${Math.round((row.requests||0)/maxR*100)}%;background:#60a5fa88"></div></div>
+            <span class="text-[0.65rem] text-slate-500 w-12 text-right">${(row.requests||0).toLocaleString()}</span>
+          </div>`}).join('')}
         </div>
       </div>`:''}
-      ${topPages.length?`<div class="vlp-card p-5">
-        <div class="text-[0.62rem] font-semibold uppercase tracking-widest text-slate-600 mb-4">Top Pages</div>
-        <div class="space-y-2">
-          ${topPages.slice(0,8).map((row,i)=>{const path=row.path||row.dimensions?.uaBrowserFamily||row.clientRequestPath||'—';const reqs=row.sum?.requests||row.requests||row.count||0;const maxR=topPages[0]?.sum?.requests||topPages[0]?.requests||topPages[0]?.count||1;return`<div class="flex items-center gap-2.5"><span class="text-[0.68rem] text-slate-500 w-4 text-right">${i+1}</span><span class="text-[0.72rem] text-slate-300 flex-1 truncate font-mono">${path}</span><div class="skill-bar w-20"><div class="skill-fill" style="width:${Math.round(reqs/maxR*100)}%"></div></div><span class="text-[0.68rem] text-slate-500 w-10 text-right">${typeof reqs==='number'?reqs.toLocaleString():reqs}</span></div>`}).join('')}
-        </div>
-      </div>`:''}
+
       ${topBrowsers.length?`<div class="vlp-card p-5">
         <div class="text-[0.62rem] font-semibold uppercase tracking-widest text-slate-600 mb-4">Top Browsers</div>
         <div class="space-y-2">
-          ${topBrowsers.slice(0,6).map((row,i)=>{const name=row.uaBrowserFamily||row.browser||row.dimensions?.uaBrowserFamily||'Unknown';const reqs=row.sum?.requests||row.requests||row.count||0;const maxR=topBrowsers[0]?.sum?.requests||topBrowsers[0]?.requests||topBrowsers[0]?.count||1;return`<div class="flex items-center gap-2.5"><span class="text-[0.68rem] text-slate-500 w-4 text-right">${i+1}</span><span class="text-[0.72rem] text-slate-300 flex-1 truncate">${name}</span><div class="skill-bar w-20"><div class="skill-fill" style="width:${Math.round(reqs/maxR*100)}%;background:#a78bfa88"></div></div><span class="text-[0.68rem] text-slate-500 w-10 text-right">${typeof reqs==='number'?reqs.toLocaleString():reqs}</span></div>`}).join('')}
+          ${topBrowsers.slice(0,8).map((row,i)=>{const maxPV=topBrowsers[0]?.pageViews||1;return`<div class="flex items-center gap-2.5">
+            <span class="text-[0.62rem] text-slate-600 w-4 text-right">${i+1}</span>
+            <span class="text-[0.72rem] text-slate-300 flex-1 truncate">${row.browser||'Unknown'}</span>
+            <div class="skill-bar w-20"><div class="skill-fill" style="width:${Math.round((row.pageViews||0)/maxPV*100)}%;background:#a78bfa88"></div></div>
+            <span class="text-[0.65rem] text-slate-500 w-12 text-right">${(row.pageViews||0).toLocaleString()}</span>
+          </div>`}).join('')}
         </div>
       </div>`:''}
-      ${topOS.length?`<div class="vlp-card p-5">
-        <div class="text-[0.62rem] font-semibold uppercase tracking-widest text-slate-600 mb-4">Top Operating Systems</div>
+
+      ${firewallEvents.length?`<div class="vlp-card p-5">
+        <div class="text-[0.62rem] font-semibold uppercase tracking-widest text-slate-600 mb-4">Firewall Events</div>
         <div class="space-y-2">
-          ${topOS.slice(0,6).map((row,i)=>{const name=row.clientOSFamily||row.os||row.dimensions?.clientOSFamily||'Unknown';const reqs=row.sum?.requests||row.requests||row.count||0;const maxR=topOS[0]?.sum?.requests||topOS[0]?.requests||topOS[0]?.count||1;return`<div class="flex items-center gap-2.5"><span class="text-[0.68rem] text-slate-500 w-4 text-right">${i+1}</span><span class="text-[0.72rem] text-slate-300 flex-1 truncate">${name}</span><div class="skill-bar w-20"><div class="skill-fill" style="width:${Math.round(reqs/maxR*100)}%;background:#fbbf2488"></div></div><span class="text-[0.68rem] text-slate-500 w-10 text-right">${typeof reqs==='number'?reqs.toLocaleString():reqs}</span></div>`}).join('')}
+          ${firewallEvents.map(e=>`<div class="flex items-center gap-2.5">
+            <span class="badge badge-${e.action==='block'?'denied':e.action==='allow'?'active':'pending'}" style="font-size:.58rem">${e.action}</span>
+            <span class="text-[0.72rem] text-slate-400 flex-1">${e.country}</span>
+            <span class="text-[0.65rem] text-slate-500">${(e.count||0).toLocaleString()}</span>
+          </div>`).join('')}
         </div>
       </div>`:''}
+
+      ${statusCodes.length?`<div class="vlp-card p-5">
+        <div class="text-[0.62rem] font-semibold uppercase tracking-widest text-slate-600 mb-4">HTTP Status Codes</div>
+        <div class="space-y-2">
+          ${statusCodes.slice(0,10).map((s,i)=>{const maxR=statusCodes[0]?.requests||1;const color=s.code<300?'#10b981':s.code<400?'#60a5fa':s.code<500?'#fbbf24':'#f87171';return`<div class="flex items-center gap-2.5">
+            <span class="text-[0.68rem] font-mono font-semibold w-10" style="color:${color}">${s.code}</span>
+            <div class="skill-bar flex-1"><div class="skill-fill" style="width:${Math.round(s.requests/maxR*100)}%;background:${color}88"></div></div>
+            <span class="text-[0.65rem] text-slate-500 w-12 text-right">${s.requests.toLocaleString()}</span>
+          </div>`}).join('')}
+        </div>
+      </div>`:''}
+
     </div>`:''}
   </div>`;lucide.createIcons();
 }

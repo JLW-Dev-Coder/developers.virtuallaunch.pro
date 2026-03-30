@@ -1,0 +1,113 @@
+.centered { display: flex; align-items: center; justify-content: center; padding: 3rem; }
+
+.formWrap { display: flex; flex-direction: column; gap: 1.5rem; }
+
+.progress { display: flex; gap: 0.5rem; }
+.progressStep {
+  flex: 1; height: 4px; border-radius: 2px;
+  background: rgba(51,65,85,.5); transition: background 0.3s;
+}
+.progressActive { background: #10b981; }
+.stepLabel { font-size: 0.75rem; color: #64748b; }
+
+.stepCard {
+  border-radius: 1rem; border: 1px solid rgba(51,65,85,.5);
+  background: rgba(15,23,42,.5); padding: 2rem;
+  backdrop-filter: blur(8px);
+  display: flex; flex-direction: column; gap: 1.5rem;
+}
+.stepTitle { font-size: 1.375rem; font-weight: 600; color: #f1f5f9; }
+.stepSub   { font-size: 0.875rem; color: #94a3b8; }
+
+.fields { display: flex; flex-direction: column; gap: 1rem; }
+.row2 { display: grid; gap: 1rem; }
+@media (min-width: 640px) { .row2 { grid-template-columns: 1fr 1fr; } }
+
+/* Skills */
+.skillsGrid { display: flex; flex-wrap: wrap; gap: 0.5rem; padding-top: 0.25rem; }
+.skillChip {
+  padding: 6px 14px; border-radius: 9999px;
+  font-size: 0.75rem; font-weight: 600;
+  border: 1px solid rgba(51,65,85,.6);
+  background: rgba(15,23,42,.6);
+  color: #94a3b8; cursor: pointer; transition: all 0.15s;
+}
+.skillChip:hover { border-color: rgba(16,185,129,.4); color: #6ee7b7; }
+.skillSelected { background: rgba(16,185,129,.12) !important; border-color: rgba(16,185,129,.5) !important; color: #6ee7b7 !important; }
+
+.optionRow { display: flex; flex-wrap: wrap; gap: 0.5rem; padding-top: 0.25rem; }
+.optionChip {
+  padding: 8px 16px; border-radius: 0.5rem;
+  font-size: 0.8rem; font-weight: 500;
+  border: 1px solid rgba(51,65,85,.6);
+  background: rgba(15,23,42,.6);
+  color: #94a3b8; cursor: pointer; transition: all 0.15s;
+}
+.optionChip:hover { border-color: rgba(16,185,129,.4); color: #e2e8f0; }
+.optionSelected { background: rgba(16,185,129,.12) !important; border-color: rgba(16,185,129,.5) !important; color: #6ee7b7 !important; }
+
+/* Plan cards */
+.planGrid { display: grid; gap: 1.5rem; }
+@media (min-width: 640px) { .planGrid { grid-template-columns: 1fr 1fr; } }
+
+.planCard {
+  position: relative; border-radius: 0.75rem;
+  border: 1px solid rgba(51,65,85,.5); background: rgba(15,23,42,.5);
+  padding: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;
+}
+.planFeatured { border-color: rgba(16,185,129,.35); background: rgba(16,185,129,.04); }
+.popularBadge {
+  position: absolute; top: -0.75rem; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg, #10b981, #059669); color: #020617;
+  font-size: 0.65rem; font-weight: 700; padding: 0.25rem 0.75rem; border-radius: 9999px; white-space: nowrap;
+}
+.planPrice { font-size: 1.875rem; font-weight: 700; color: #f1f5f9; }
+.planPer   { font-size: 0.875rem; color: #64748b; }
+.planDesc  { font-size: 0.8rem; color: #94a3b8; }
+.planFeatures {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column; gap: 0.375rem;
+  font-size: 0.8rem; color: #cbd5e1; flex: 1;
+}
+.planFeatures li { padding-left: 1rem; position: relative; }
+.planFeatures li::before { content: '✓'; position: absolute; left: 0; color: #10b981; font-weight: 700; }
+
+.planBtnPrimary {
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  padding: 0.75rem; border-radius: 0.5rem;
+  background: linear-gradient(135deg, #10b981, #059669); color: #020617;
+  font-weight: 600; font-size: 0.85rem; border: none; cursor: pointer;
+  transition: all 0.2s; box-shadow: 0 4px 16px rgba(16,185,129,.25);
+}
+.planBtnPrimary:hover { background: linear-gradient(135deg, #34d399, #10b981); }
+.planBtnPrimary:disabled { opacity: .6; cursor: not-allowed; }
+
+.planBtnSecondary {
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  padding: 0.75rem; border-radius: 0.5rem;
+  border: 1px solid rgba(51,65,85,.6); background: transparent;
+  color: #94a3b8; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;
+}
+.planBtnSecondary:hover { border-color: rgba(16,185,129,.4); color: #e2e8f0; }
+.planBtnSecondary:disabled { opacity: .6; cursor: not-allowed; }
+
+/* Nav */
+.errorMsg {
+  font-size: 0.875rem; color: #fca5a5;
+  background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3);
+  border-radius: 0.5rem; padding: 0.75rem 1rem;
+}
+.navRow { display: flex; justify-content: flex-end; gap: 0.75rem; }
+.backBtn {
+  padding: 0.75rem 1.5rem; border-radius: 0.5rem;
+  border: 1px solid rgba(51,65,85,.6); background: transparent;
+  color: #64748b; font-weight: 600; cursor: pointer; transition: all 0.15s;
+}
+.backBtn:hover { color: #e2e8f0; border-color: rgba(51,65,85,.9); }
+.nextBtn {
+  padding: 0.75rem 1.5rem; border-radius: 0.5rem;
+  background: linear-gradient(135deg, #10b981, #059669); color: #020617;
+  font-weight: 600; border: none; cursor: pointer; transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(16,185,129,.25);
+}
+.nextBtn:hover { background: linear-gradient(135deg, #34d399, #10b981); }

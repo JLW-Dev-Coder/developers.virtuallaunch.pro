@@ -1,0 +1,97 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  width: 100%;
+  border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+  background: rgba(2, 6, 23, 0.8);
+  backdrop-filter: blur(12px);
+}
+
+.inner {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  opacity: 1;
+  transition: opacity 0.15s;
+}
+.logo:hover { opacity: 0.9; }
+
+.logoMark {
+  display: flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, #10b981, #059669);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #020617;
+  box-shadow: 0 4px 16px rgba(16,185,129,.2);
+}
+
+.logoText { display: flex; flex-direction: column; line-height: 1.2; }
+.logoName { font-weight: 600; letter-spacing: -0.015em; color: #fff; font-size: 0.875rem; }
+.logoSub  { font-size: 0.75rem; color: #94a3b8; }
+
+.nav {
+  display: none;
+  align-items: center;
+  gap: 2rem;
+}
+@media (min-width: 768px) { .nav { display: flex; } }
+
+.navLink {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #cbd5e1;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.navLink:hover { color: #34d399; }
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.operatorBtn {
+  padding: 0.625rem 1rem;
+  border: 1px solid rgba(51, 65, 85, 0.7);
+  border-radius: 0.5rem;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.operatorBtn:hover { border-color: rgba(16,185,129,.5); color: #f1f5f9; }
+
+.ctaBtn {
+  padding: 0.625rem 1.5rem;
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-radius: 0.5rem;
+  color: #020617;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(16,185,129,.25);
+}
+.ctaBtn:hover {
+  background: linear-gradient(135deg, #34d399, #10b981);
+  transform: scale(1.03);
+  box-shadow: 0 4px 20px rgba(16,185,129,.4);
+}

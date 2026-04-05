@@ -29,6 +29,16 @@ export default function DevelopersPage() {
           <DevelopersList />
         </div>
       </main>
+      <section className={styles.ctaSection}>
+        <div className={styles.ctaInner}>
+          <h2 className={styles.ctaTitle}>Find developers who specialize in exactly what you need</h2>
+          <p className={styles.ctaSub}>Browse vetted profiles or tell us what you&apos;re building — we&apos;ll match you.</p>
+          <div className={styles.ctaButtons}>
+            <a href="/find-developers" className={styles.ctaPrimary}>Find a Developer</a>
+            <a href="/pricing" className={styles.ctaSecondary}>View Pricing</a>
+          </div>
+        </div>
+      </section>
       <Footer />
     </div>
   );

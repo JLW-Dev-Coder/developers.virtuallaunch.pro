@@ -1,4 +1,4 @@
-// File: C:\Users\britn\OneDrive\developers.virtuallaunch.pro\app\affiliate\page.tsx
+// File: C:\Users\eimaj\developers.virtuallaunch.pro\app\affiliate\page.tsx
 import * as entry from '../../../../app/affiliate/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

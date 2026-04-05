@@ -1,4 +1,4 @@
-// File: C:\Users\britn\OneDrive\developers.virtuallaunch.pro\app\find-developers\page.tsx
+// File: C:\Users\eimaj\developers.virtuallaunch.pro\app\find-developers\page.tsx
 import * as entry from '../../../../app/find-developers/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

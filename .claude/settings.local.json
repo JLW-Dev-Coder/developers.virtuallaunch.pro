@@ -1,18 +1,21 @@
 {
   "permissions": {
     "allow": [
-      "Bash(file \"c:\\\\Users\\\\britn\\\\OneDrive\\\\developers.virtuallaunch.pro\\\\public\\\\*.{png,jpg,jpeg,webp,gif}\")",
-      "Read(//etc/**)",
-      "Bash(npm install:*)",
-      "Bash(node -e \"console.log\\(require\\(''./node_modules/stripe/package.json''\\).version\\)\")",
-      "Bash(python -:*)",
-      "Bash(node -e \"const p = require\\(''./package.json''\\); console.log\\(JSON.stringify\\(p.dependencies, null, 2\\)\\); console.log\\(JSON.stringify\\(p.devDependencies, null, 2\\)\\);\")",
-      "Bash(wrangler --version)",
-      "Bash(wrangler r2:*)",
-      "Bash(node -e \"import\\(''wrangler''\\).then\\(m => console.log\\(Object.keys\\(m\\)\\)\\).catch\\(e => console.error\\(e.message\\)\\)\")"
-    ],
-    "additionalDirectories": [
-      "c:\\Users\\britn\\OneDrive\\developers.virtuallaunch.pro\\functions\\operator\\tickets"
+      "Bash(npm install:*)", "Bash(npm run:*)", "Bash(node:*)", "Bash(npx:*)",
+      "Bash(mkdir:*)", "Bash(copy:*)", "Bash(move:*)", "Bash(dir:*)",
+      "Bash(tree:*)", "Bash(grep:*)", "Bash(find:*)", "Bash(cat:*)",
+      "Bash(type:*)", "Bash(echo:*)", "Bash(ls:*)", "Bash(head:*)",
+      "Bash(tail:*)", "Bash(wc:*)", "Read(**)"
     ]
-  }
+  },
+  "autoApprove": ["Write", "Edit", "Create"],
+  "autoApprovePatterns": [
+    ".claude/**", "**/*.md", "**/*.json", "**/*.ts", "**/*.tsx",
+    "**/*.css", "**/*.html", "**/*.js", "**/*.mjs"
+  ],
+  "deny": [
+    "Bash(rm -rf *)", "Bash(del /s *)", "Bash(curl *)",
+    "Bash(wget *)", "Bash(wrangler deploy *)", "Bash(wrangler publish *)"
+  ],
+  "maxTurns": 30
 }

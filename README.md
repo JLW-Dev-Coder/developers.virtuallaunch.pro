@@ -1,294 +1,189 @@
-# VirtualLaunchPro Developer Funnel (Cloudflare Worker + D1)
+# developers.virtuallaunch.pro
 
-## Overview
+**Product:** Developers VLP (DVLP)
+**Domain:** [developers.virtuallaunch.pro](https://developers.virtuallaunch.pro)
+**Purpose:** Freelancer/client matching marketplace — connects talented developers with U.S. businesses seeking development talent.
 
-This project implements a production-ready onboarding funnel for VirtualLaunchPro using:
+---
 
-* **Frontend (Canva HTML)** deployed via Cloudflare Pages
-* **Cloudflare Worker API** for reference generation and lookup
-* **Cloudflare D1 Database** for persistent storage
+## System Overview
 
-This replaces fragile client-only solutions with a system capable of generating and retrieving real client reference data.
+DVLP is the developer-facing frontend of VirtualLaunch Pro. It handles:
+- Developer onboarding and profile management
+- Client intake (find-developers flow)
+- Stripe-powered plan selection (Free + $2.99/mo)
+- Public developer directory and reviews
+- Operator dashboard for managing the marketplace
+
+This repo is **frontend-only**. All API logic lives in the VLP Worker at `api.virtuallaunch.pro`.
 
 ---
 
 ## Architecture
 
 ```
-Landing → Stripe → Success Page
-              ↓
-        Worker creates reference
-              ↓
-        Stored in D1
-              ↓
-Support page → Worker lookup → status returned
+Browser → developers.virtuallaunch.pro (Cloudflare Pages)
+                    ↓ fetch (credentials: include)
+            api.virtuallaunch.pro (VLP Worker)
+                    ↓
+            Cloudflare R2 / KV / Stripe / Gmail / Resend
+```
+
+| Layer | Technology | Location |
+|-------|-----------|----------|
+| Frontend | Next.js 15.1.12 (App Router, static export) | This repo |
+| Hosting | Cloudflare Pages | `out/` directory |
+| API | VLP Worker | `api.virtuallaunch.pro` |
+| Storage | Cloudflare R2 (`onboarding-records`) | VLP Worker |
+| Sessions | Cloudflare KV (`OPERATOR_SESSIONS`) | VLP Worker |
+| Payments | Stripe Checkout Sessions | VLP Worker |
+| Email | Gmail API (transactional) + Resend (bulk) | VLP Worker |
+
+---
+
+## Responsibilities
+
+| This repo owns | VLP Worker owns |
+|----------------|-----------------|
+| All page rendering and UX | All API endpoints (`/v1/dvlp/*`) |
+| Static asset generation | Stripe webhook handling |
+| Client-side form validation | R2/KV data operations |
+| API client (`lib/api.ts`) | Email dispatch |
+| CSS design system | Auth session management |
+
+---
+
+## Repo Structure
+
+```
+app/                    # Next.js pages (App Router)
+components/             # Shared React components (Header, Footer, Guards)
+lib/                    # API client
+contracts/              # Reference copies of API contracts (read-only)
+scripts/                # Operational scripts
+public/                 # Static assets
+out/                    # Build output (Cloudflare Pages serves this)
+.claude/                # Claude context and canonicals
 ```
 
 ---
 
-## Project Structure
+## Core Workflows
 
-```
-/
-  /contracts
-    onboarding.json
-    registry.json  
-    support.json 
-  /public
-    index.html
-    onboarding.html
-    success.html
-    support.html
-  /worker
-    index.js
-  README
-  wrangler.toml
-```
+### Developer Onboarding
+1. Developer fills form on `/onboarding`
+2. `submitOnboarding()` → VLP Worker creates record in R2
+3. `createCheckout()` → Stripe Checkout session
+4. Stripe redirects to `/success`
+5. `/success` polls `getSessionStatus()` until webhook confirms payment
 
----
+### Client Intake
+1. Client fills form on `/find-developers`
+2. `submitMatchIntake()` → VLP Worker stores request
 
-## Setup Instructions
-
-### 1. Create Repository
-
-Create a new repository:
-
-```
-developers.virtuallaunch.pro
-```
+### Operator Dashboard
+1. Operator signs in via `/sign-in` (magic link)
+2. `AuthGuard` + `AdminGuard` gate `/operator`
+3. Dashboard calls operator endpoints for submissions, developers, jobs, tickets, analytics
 
 ---
 
-### 2. Install Cloudflare Wrangler
+## Data Contracts
 
-```
-npm install -g wrangler
-wrangler login
-```
+Contracts live in `contracts/` as reference copies. The VLP Worker is authoritative.
 
----
-
-### 3. Create D1 Database
-
-```
-wrangler d1 create vlp_developers
-```
-
-Save the returned:
-
-```
-database_id = "YOUR_DB_ID"
-```
+| Contract | Purpose |
+|----------|---------|
+| `onboarding.json` | Developer signup payload |
+| `registry.json` | Full endpoint registry |
+| `reviews.json` | Public review shape |
+| `find-developers.json` | Client intake payload |
+| `operator-*.json` | Operator endpoint shapes |
 
 ---
 
-### 4. Create Database Table
+## Setup / Local Development
 
+```bash
+npm install
+npm run dev          # Start dev server on localhost:3000
+npm run build        # Static export to out/
+npm run lint         # ESLint
 ```
-wrangler d1 execute vlp_developers --command "
-CREATE TABLE clients (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  session_id TEXT,
-  client_reference TEXT,
-  status TEXT DEFAULT 'In Progress',
-  created_at TEXT
-);
-"
-```
+
+Requires Node.js 18+.
 
 ---
 
-### 5. Configure Wrangler
+## Commands
 
-`wrangler.toml`
-
-```
-name = "vlp-developer-worker"
-main = "worker/index.ts"
-compatibility_date = "2026-03-20"
-
-[[d1_databases]]
-binding = "DB"
-database_name = "vlp_developers"
-database_id = "YOUR_DB_ID"
-```
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Local development server |
+| `npm run build` | Production static export |
+| `npm run lint` | Run ESLint |
+| `node scripts/seed-canned-responses.js` | Seed default canned responses to R2 |
+| `node scripts/backfill-email-index.js` | Backfill email index in R2 |
 
 ---
 
-## Worker Implementation
+## Environment / Config
 
-`/worker/index.ts`
+### wrangler.toml (Pages bindings)
 
-```ts
-export default {
-  async fetch(request: Request, env: any) {
-    const url = new URL(request.url);
+| Binding | Type | Value |
+|---------|------|-------|
+| `ONBOARDING_R2` | R2 | `onboarding-records` |
+| `OPERATOR_SESSIONS` | KV | Session + dedupe store |
+| `EMAIL_FROM` | var | `team@virtuallaunch.pro` |
+| `CF_ZONE_ID` | var | Cloudflare zone ID |
 
-    // Create reference
-    if (url.pathname === "/create-reference" && request.method === "POST") {
-      const body = await request.json();
-      const session_id = body.session_id || "";
+### Secrets (Cloudflare dashboard)
 
-      const client_reference =
-        "VLP-" +
-        Math.random().toString(36).substring(2, 8).toUpperCase();
-
-      await env.DB.prepare(
-        `INSERT INTO clients (session_id, client_reference, created_at)
-         VALUES (?, ?, ?)`
-      )
-        .bind(session_id, client_reference, new Date().toISOString())
-        .run();
-
-      return new Response(
-        JSON.stringify({ client_reference }),
-        { headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    // Lookup reference
-    if (url.pathname === "/lookup") {
-      const ref = url.searchParams.get("ref");
-
-      const result = await env.DB.prepare(
-        `SELECT status FROM clients WHERE client_reference = ?`
-      )
-        .bind(ref)
-        .first();
-
-      return new Response(
-        JSON.stringify(result || { status: "Not Found" }),
-        { headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    return new Response("Not Found", { status: 404 });
-  },
-};
-```
+`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_FREE`, `STRIPE_PRICE_PAID`, `CF_API_TOKEN`, `CRON_SECRET`, `RESEND_API_KEY`, `GOOGLE_PRIVATE_KEY`, `GOOGLE_CLIENT_EMAIL`
 
 ---
 
-## Deploy Worker
+## Deployment
 
-```
-wrangler deploy
-```
-
-Example output:
-
-```
-https://vlp-developer-worker.your-subdomain.workers.dev
-```
+- **Platform:** Cloudflare Pages
+- **Build:** `npm run build` → static export to `out/`
+- **Trigger:** Git push to `main` triggers automatic deploy
+- **Domain:** `developers.virtuallaunch.pro`
+- **Config:** `wrangler.toml` (bindings only, no Worker)
 
 ---
 
-## Frontend Deployment (Cloudflare Pages)
+## Constraints / Rules
 
-1. Go to Cloudflare Dashboard
-2. Navigate to **Pages → Create Project**
-3. Connect GitHub repository
-4. Configure build:
-
-   * Framework: None
-   * Output directory: `/public`
-
-Deploy.
+1. No backend code in this repo — all API via VLP Worker
+2. Never hardcode secrets or API keys
+3. All fetch calls go through `lib/api.ts`
+4. `contracts/` is read-only reference — do not modify
+5. Payment state requires webhook confirmation, never client-side only
+6. `wrangler.toml` is Pages config only — no Worker name or `main` field
 
 ---
 
-## Domain Configuration
+## Related Systems
 
-In Cloudflare DNS:
-
-```
-developer → your-pages-project.pages.dev
-```
-
----
-
-## Frontend Integration
-
-### Success Page
-
-```javascript
-const params = new URLSearchParams(window.location.search);
-const sessionId = params.get("session_id");
-
-if (sessionId) {
-  fetch("https://vlp-developer-worker.YOUR.workers.dev/create-reference", {
-    method: "POST",
-    body: JSON.stringify({ session_id: sessionId }),
-  })
-    .then(res => res.json())
-    .then(data => {
-      document.getElementById("ref").textContent = data.client_reference;
-    });
-}
-```
+| System | Domain | Role |
+|--------|--------|------|
+| VLP Hub | virtuallaunch.pro | Parent platform, VLP Worker host |
+| VLP Worker | api.virtuallaunch.pro | All DVLP backend routes |
+| TaxMonitor | taxmonitor.pro | Sibling product |
+| Transcript | transcript.taxmonitor.pro | Sibling product |
+| TaxTools | taxtools.taxmonitor.pro | Sibling product |
 
 ---
 
-### Support Page
+## Glossary
 
-```javascript
-document.getElementById("checkBtn").onclick = async () => {
-  const ref = document.getElementById("refInput").value;
-
-  const res = await fetch(
-    `https://vlp-developer-worker.YOUR.workers.dev/lookup?ref=${ref}`
-  );
-
-  const data = await res.json();
-
-  document.getElementById("status").textContent = data.status;
-};
-```
-
----
-
-## Stripe Configuration
-
-Set success URL in Stripe:
-
-```
-https://developers.virtuallaunch.pro/success.html?session_id={CHECKOUT_SESSION_ID}
-```
-
----
-
-## Capabilities
-
-### Included
-
-* Unique client reference generation
-* Persistent storage in D1
-* Secure lookup via Worker API
-* Fully static frontend deployment
-
-### Not Included (Yet)
-
-* Payment verification via Stripe webhook
-* Status updates based on payment events
-
----
-
-## Recommended Next Step
-
-Add a Stripe webhook to:
-
-* Verify completed payments
-* Update `status` field to "Paid"
-* Ensure references are tied to real transactions
-
----
-
-## Summary
-
-This system provides a clean separation:
-
-* Frontend handles user interaction and UX
-* Worker handles logic and data
-* D1 handles persistence
-
-It replaces fragile client-side-only approaches with a scalable, maintainable architecture suitable for production use.
+| Term | Definition |
+|------|-----------|
+| DVLP | Developers VLP — this product |
+| VLP Worker | Cloudflare Worker at api.virtuallaunch.pro |
+| ref_number | Unique reference per onboarding record |
+| operator | Authenticated admin managing the marketplace |
+| onboarding record | Developer profile stored in R2 |
+| canned response | Reusable email template stored in R2 |

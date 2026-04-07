@@ -1,4 +1,4 @@
-// File: C:\Users\eimaj\developers.virtuallaunch.pro\app\pricing\page.tsx
+// File: C:\Users\britn\OneDrive\developers.virtuallaunch.pro\app\pricing\page.tsx
 import * as entry from '../../../../app/pricing/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

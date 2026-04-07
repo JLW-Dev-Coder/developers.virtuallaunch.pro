@@ -12,6 +12,105 @@
 .title { font-size: clamp(1.75rem, 4vw, 3rem); font-weight: 700; color: #f1f5f9; margin-bottom: 0.75rem; }
 .sub { font-size: 1.125rem; color: #94a3b8; }
 
+.heroActions {
+  display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.75rem; flex-wrap: wrap;
+}
+.heroPrimary {
+  display: inline-block; padding: 0.75rem 1.75rem;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #020617; font-weight: 600; border-radius: 0.5rem; text-decoration: none;
+  transition: all 0.2s; box-shadow: 0 4px 16px rgba(16,185,129,.25);
+}
+.heroPrimary:hover { transform: scale(1.03); }
+.heroSecondary {
+  display: inline-block; padding: 0.75rem 1.75rem;
+  border: 1px solid rgba(51,65,85,.7); color: #f1f5f9; font-weight: 600;
+  border-radius: 0.5rem; text-decoration: none; transition: all 0.2s;
+}
+.heroSecondary:hover { border-color: rgba(16,185,129,.5); background: rgba(16,185,129,.05); }
+
+/* Ticket lookup */
+.lookupSection { margin-bottom: 3rem; scroll-margin-top: 5rem; }
+.lookupCard {
+  border-radius: 0.875rem; border: 1px solid rgba(51,65,85,.5);
+  background: rgba(15,23,42,.5); padding: 1.75rem;
+  backdrop-filter: blur(8px);
+}
+.lookupTitle { font-size: 1.125rem; font-weight: 600; color: #f1f5f9; margin-bottom: 0.375rem; }
+.lookupSub { font-size: 0.875rem; color: #94a3b8; margin-bottom: 1.25rem; line-height: 1.55; }
+.lookupForm { display: flex; flex-direction: column; gap: 0.625rem; }
+@media (min-width: 640px) { .lookupForm { flex-direction: row; } }
+.lookupForm input { flex: 1; }
+.lookupBtn {
+  padding: 0.625rem 1.5rem;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #020617; font-weight: 600; border: none; border-radius: 0.5rem;
+  font-size: 0.875rem; cursor: pointer; transition: all .2s;
+}
+.lookupBtn:hover:not(:disabled) { transform: scale(1.02); }
+.lookupBtn:disabled { opacity: 0.6; cursor: wait; }
+.lookupError {
+  margin-top: 1rem; padding: 0.75rem 1rem;
+  border-radius: 0.5rem; border: 1px solid rgba(239,68,68,.3);
+  background: rgba(239,68,68,.08); color: #fca5a5; font-size: 0.8125rem;
+}
+.lookupResult { margin-top: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.lookupRow {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.5rem;
+  background: rgba(30,41,59,.4);
+  border: 1px solid rgba(51,65,85,.4);
+}
+.lookupLabel { font-size: 0.75rem; text-transform: uppercase; letter-spacing: .06em; color: #64748b; font-weight: 600; }
+.lookupValue { font-size: 0.875rem; color: #cbd5e1; }
+.lookupBadge {
+  font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+  padding: 0.25rem 0.75rem; border-radius: 9999px;
+  background: rgba(16,185,129,.12);
+  color: #6ee7b7;
+  border: 1px solid rgba(16,185,129,.25);
+}
+.lookupPosts { display: flex; flex-direction: column; gap: 0.625rem; margin-top: 0.5rem; }
+.lookupPostsTitle { font-size: 0.8125rem; font-weight: 600; color: #cbd5e1; margin-bottom: 0.25rem; }
+.lookupPost {
+  padding: 0.75rem 0.875rem;
+  border-radius: 0.5rem;
+  background: rgba(30,41,59,.5);
+  border: 1px solid rgba(51,65,85,.4);
+}
+.lookupPostBody { font-size: 0.8125rem; color: #cbd5e1; line-height: 1.55; white-space: pre-wrap; }
+.lookupPostMeta { font-size: 0.7rem; color: #64748b; margin-top: 0.375rem; }
+.lookupEmpty { font-size: 0.8125rem; color: #64748b; text-align: center; padding: 0.75rem; }
+
+/* Book a call */
+.bookCallSection { margin-bottom: 3rem; scroll-margin-top: 5rem; }
+.bookCallCard {
+  display: flex; gap: 1.25rem; align-items: center; flex-wrap: wrap;
+  padding: 1.75rem;
+  border-radius: 0.875rem;
+  border: 1px solid rgba(16,185,129,.3);
+  background: linear-gradient(135deg, rgba(16,185,129,.08), rgba(5,150,105,.04));
+  backdrop-filter: blur(8px);
+}
+.bookCallIcon {
+  width: 3rem; height: 3rem; border-radius: 0.75rem;
+  background: linear-gradient(135deg, #10b981, #059669);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  box-shadow: 0 8px 24px rgba(16,185,129,.25);
+}
+.bookCallBody { flex: 1; min-width: 14rem; }
+.bookCallTitle { font-size: 1.0625rem; font-weight: 600; color: #f1f5f9; margin-bottom: 0.375rem; }
+.bookCallDesc { font-size: 0.875rem; color: #94a3b8; line-height: 1.55; }
+.bookCallBtn {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #020617; font-weight: 600; border: none; border-radius: 0.5rem;
+  font-size: 0.875rem; cursor: pointer; transition: all .2s;
+  box-shadow: 0 4px 16px rgba(16,185,129,.25);
+}
+.bookCallBtn:hover { transform: scale(1.03); }
+
 /* FAQ */
 .faqSection { margin-bottom: 3rem; }
 .sectionTitle { font-size: 1.25rem; font-weight: 600; color: #f1f5f9; margin-bottom: 1.5rem; }

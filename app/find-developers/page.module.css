@@ -29,6 +29,30 @@
 .field { display: flex; flex-direction: column; gap: 0.375rem; }
 .label { font-size: 0.875rem; font-weight: 500; color: #cbd5e1; }
 
+.checkboxGrid {
+  display: grid; gap: 0.5rem;
+  grid-template-columns: 1fr 1fr;
+}
+@media (min-width: 640px) { .checkboxGrid { grid-template-columns: repeat(3, 1fr); } }
+.checkboxChip {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(51,65,85,.7);
+  background: rgba(15,23,42,.6);
+  color: #cbd5e1;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all .15s;
+}
+.checkboxChip:hover { border-color: rgba(16,185,129,.4); }
+.checkboxChip input { accent-color: #10b981; cursor: pointer; }
+.checkboxChecked {
+  border-color: rgba(16,185,129,.6);
+  background: rgba(16,185,129,.1);
+  color: #6ee7b7;
+}
+
 .errorMsg {
   font-size: 0.875rem; color: #fca5a5;
   background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3);

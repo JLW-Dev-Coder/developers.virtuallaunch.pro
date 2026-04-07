@@ -25,6 +25,15 @@
 
 /* Skills */
 .skillsGrid { display: flex; flex-wrap: wrap; gap: 0.5rem; padding-top: 0.25rem; }
+.skillLevelList { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 0.25rem; }
+.skillLevelRow {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(51,65,85,.5);
+  background: rgba(15,23,42,.4);
+}
+.skillLevelName { font-size: 0.875rem; font-weight: 500; color: #cbd5e1; }
 .skillChip {
   padding: 6px 14px; border-radius: 9999px;
   font-size: 0.75rem; font-weight: 600;

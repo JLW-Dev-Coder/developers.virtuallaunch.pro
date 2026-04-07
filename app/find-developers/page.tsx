@@ -19,30 +19,51 @@ const TIMELINES = ['ASAP', '1–3 months', '3–6 months', '6–12 months', 'Fle
 const SKILL_PREFS = ['Frontend', 'Backend', 'Full Stack', 'Mobile', 'Data / ML', 'DevOps'];
 const EXP_LEVELS = ['Junior', 'Mid-Level', 'Senior', 'Lead / Principal'];
 
+function normalizePhone(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 10);
+  if (digits.length < 4) return digits;
+  if (digits.length < 7) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
 export default function FindDevelopersPage() {
   const [form, setForm] = useState({
     companyName: '', contactName: '', email: '', phone: '',
-    projectType: '', projectDesc: '', budget: '', timeline: '',
+    projectTypes: [] as string[], projectDesc: '', budget: '', timeline: '',
     skillsPreference: '', experienceLevel: '', additionalNotes: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
 
-  function set(field: string, value: string) {
+  function set(field: string, value: string | string[]) {
     setForm(prev => ({ ...prev, [field]: value }));
+  }
+
+  function toggleProjectType(t: string) {
+    setForm(prev => ({
+      ...prev,
+      projectTypes: prev.projectTypes.includes(t)
+        ? prev.projectTypes.filter(x => x !== t)
+        : [...prev.projectTypes, t],
+    }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    const req = ['companyName', 'contactName', 'email', 'projectType', 'projectDesc', 'budget', 'timeline', 'skillsPreference', 'experienceLevel'];
-    for (const f of req) {
-      if (!form[f as keyof typeof form]) { setError('Please fill in all required fields.'); return; }
+    if (!form.companyName || !form.contactName || !form.email || form.projectTypes.length === 0
+      || !form.projectDesc || !form.budget || !form.timeline || !form.skillsPreference || !form.experienceLevel) {
+      setError('Please fill in all required fields.');
+      return;
     }
     setSubmitting(true);
     try {
-      await submitMatchIntake({ eventId: generateEventId(), ...form });
+      await submitMatchIntake({
+        eventId: generateEventId(),
+        ...form,
+        projectType: form.projectTypes.join(', '),
+      });
       setDone(true);
     } catch {
       setError('Submission failed. Please try again.');
@@ -102,17 +123,25 @@ export default function FindDevelopersPage() {
                   </div>
                   <div className={styles.field}>
                     <label className={styles.label}>Phone</label>
-                    <input type="tel" className="vlp-input field-focus" placeholder="+1 (555) 000-0000"
-                      value={form.phone} onChange={e => set('phone', e.target.value)} />
+                    <input type="tel" className="vlp-input field-focus" placeholder="(555) 000-0000"
+                      value={form.phone}
+                      onChange={e => set('phone', e.target.value)}
+                      onBlur={e => set('phone', normalizePhone(e.target.value))} />
                   </div>
                 </div>
                 <div className={styles.field}>
-                  <label className={styles.label}>Project Type *</label>
-                  <select className="vlp-input field-focus" value={form.projectType}
-                    onChange={e => set('projectType', e.target.value)}>
-                    <option value="">Select…</option>
-                    {PROJECT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <label className={styles.label}>Project Type * <span style={{ fontWeight: 400, color: '#64748b' }}>(select all that apply)</span></label>
+                  <div className={styles.checkboxGrid}>
+                    {PROJECT_TYPES.map(t => {
+                      const checked = form.projectTypes.includes(t);
+                      return (
+                        <label key={t} className={`${styles.checkboxChip} ${checked ? styles.checkboxChecked : ''}`}>
+                          <input type="checkbox" checked={checked} onChange={() => toggleProjectType(t)} />
+                          <span>{t}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div className={styles.field}>
                   <label className={styles.label}>Project Description *</label>
@@ -178,7 +207,7 @@ export default function FindDevelopersPage() {
           <h2 className={styles.ctaTitle}>Find developers who specialize in exactly what you need</h2>
           <p className={styles.ctaSub}>Browse vetted profiles or tell us what you&apos;re building — we&apos;ll match you.</p>
           <div className={styles.ctaButtons}>
-            <a href="/find-developers" className={styles.ctaPrimary}>Find a Developer</a>
+            <a href="/developers" className={styles.ctaPrimary}>Find a Developer</a>
             <a href="/pricing" className={styles.ctaSecondary}>View Pricing</a>
           </div>
         </div>

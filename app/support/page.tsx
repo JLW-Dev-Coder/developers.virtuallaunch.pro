@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BackgroundEffects from '@/components/BackgroundEffects';
+import BookCallCard from './BookCallCard';
+import TicketLookup from './TicketLookup';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -50,8 +52,15 @@ export default function SupportPage() {
               </svg>
             </div>
             <h1 className={styles.title}>Support</h1>
-            <p className={styles.sub}>Find answers or reach out — we are here to help.</p>
+            <p className={styles.sub}>Find answers, look up your status, or reach out — we are here to help.</p>
+            <div className={styles.heroActions}>
+              <a href="#book-call" className={styles.heroPrimary}>Book a Call</a>
+              <a href="#ticket-lookup" className={styles.heroSecondary}>Check My Status</a>
+            </div>
           </div>
+
+          <TicketLookup />
+          <BookCallCard />
 
           <section className={styles.faqSection}>
             <h2 className={styles.sectionTitle}>Frequently Asked Questions</h2>
@@ -66,7 +75,7 @@ export default function SupportPage() {
           <section className={styles.contactSection}>
             <h2 className={styles.sectionTitle}>Contact Us</h2>
             <div className={styles.contactGrid}>
-              <a href="https://cal.com/virtuallaunchpro/intro" target="_blank" rel="noopener noreferrer" className={styles.contactCard}>
+              <a href="#book-call" className={styles.contactCard}>
                 <div className={styles.contactIconWrap}>
                   <svg viewBox="0 0 24 24" fill="#10b981" width="20" height="20">
                     <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z" />
@@ -120,8 +129,8 @@ export default function SupportPage() {
           <h2 className={styles.ctaTitle}>Find developers who specialize in exactly what you need</h2>
           <p className={styles.ctaSub}>Tell us your project requirements and we will match you with a vetted developer from our network.</p>
           <div className={styles.ctaButtons}>
-            <a href="/find-developers" className={styles.ctaPrimary}>Find a Developer</a>
-            <a href="/pricing" className={styles.ctaSecondary}>View Pricing</a>
+            <a href="/developers" className={styles.ctaPrimary}>Find a Developer</a>
+            <a href="#book-call" className={styles.ctaSecondary}>Book a Call</a>
           </div>
         </div>
       </section>

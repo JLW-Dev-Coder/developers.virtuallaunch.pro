@@ -1,8 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getDevelopers, type Developer } from '@/lib/api';
 import styles from './page.module.css';
+
+const SKILL_OPTIONS = ['React', 'Vue', 'Angular', 'Node.js', 'Python', 'Django', 'Rails', 'Laravel',
+  'TypeScript', 'JavaScript', 'GraphQL', 'PostgreSQL', 'MongoDB', 'AWS', 'Docker', 'Kubernetes', 'Go', 'Rust'];
+const AVAILABILITY_OPTIONS = ['Full-time', 'Part-time', 'Contract', 'Weekends only'];
+const EXPERIENCE_OPTIONS = ['1–2 years', '3–5 years', '5–8 years', '8+ years'];
 
 function SkeletonCard() {
   return (
@@ -48,6 +53,11 @@ function DevCard({ dev }: { dev: Developer }) {
 export default function DevelopersList() {
   const [devs, setDevs] = useState<Developer[] | null>(null);
   const [search, setSearch] = useState('');
+  const [skill, setSkill] = useState('');
+  const [availability, setAvailability] = useState('');
+  const [experience, setExperience] = useState('');
+  const [minRate, setMinRate] = useState('');
+  const [maxRate, setMaxRate] = useState('');
   const [error, setError] = useState(false);
 
   useEffect(() => {
@@ -56,24 +66,73 @@ export default function DevelopersList() {
       .catch(() => setError(true));
   }, []);
 
-  const filtered = devs?.filter(d => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      d.full_name?.toLowerCase().includes(q) ||
-      Object.keys(d.skills ?? {}).some(k => k.toLowerCase().includes(q))
-    );
-  }) ?? [];
+  const filtered = useMemo(() => {
+    if (!devs) return [];
+    return devs.filter(d => {
+      if (search) {
+        const q = search.toLowerCase();
+        const matches = d.full_name?.toLowerCase().includes(q) ||
+          Object.keys(d.skills ?? {}).some(k => k.toLowerCase().includes(q));
+        if (!matches) return false;
+      }
+      if (skill) {
+        const haveSkill = Object.keys(d.skills ?? {}).some(k =>
+          k.replace('skill_', '').toLowerCase() === skill.toLowerCase());
+        if (!haveSkill) return false;
+      }
+      if (availability && d.availability !== availability) return false;
+      if (experience && (d as { experience_level?: string }).experience_level !== experience) return false;
+      const rate = typeof d.hourly_rate === 'number' ? d.hourly_rate : Number(d.hourly_rate);
+      if (minRate && (!rate || rate < Number(minRate))) return false;
+      if (maxRate && (!rate || rate > Number(maxRate))) return false;
+      return true;
+    });
+  }, [devs, search, skill, availability, experience, minRate, maxRate]);
+
+  function clearFilters() {
+    setSearch(''); setSkill(''); setAvailability(''); setExperience(''); setMinRate(''); setMaxRate('');
+  }
+
+  const hasFilters = search || skill || availability || experience || minRate || maxRate;
 
   return (
     <>
-      <div className={styles.searchRow}>
+      <div className={styles.filterBar}>
         <input
-          className={`vlp-input ${styles.searchInput}`}
+          className={`vlp-input ${styles.filterInput}`}
           placeholder="Search by name or skill…"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
+        <select className={`vlp-input ${styles.filterSelect}`} value={skill} onChange={e => setSkill(e.target.value)}>
+          <option value="">All skills</option>
+          {SKILL_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select className={`vlp-input ${styles.filterSelect}`} value={experience} onChange={e => setExperience(e.target.value)}>
+          <option value="">Any experience</option>
+          {EXPERIENCE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select className={`vlp-input ${styles.filterSelect}`} value={availability} onChange={e => setAvailability(e.target.value)}>
+          <option value="">Any availability</option>
+          {AVAILABILITY_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <input
+          type="number" min="0"
+          className={`vlp-input ${styles.filterRate}`}
+          placeholder="Min $/hr"
+          value={minRate}
+          onChange={e => setMinRate(e.target.value)}
+        />
+        <input
+          type="number" min="0"
+          className={`vlp-input ${styles.filterRate}`}
+          placeholder="Max $/hr"
+          value={maxRate}
+          onChange={e => setMaxRate(e.target.value)}
+        />
+        {hasFilters && (
+          <button type="button" className={styles.clearBtn} onClick={clearFilters}>Clear</button>
+        )}
       </div>
 
       {error && (

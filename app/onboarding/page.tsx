@@ -18,6 +18,23 @@ const SKILLS = ['React', 'Vue', 'Angular', 'Node.js', 'Python', 'Django', 'Rails
   'TypeScript', 'JavaScript', 'GraphQL', 'PostgreSQL', 'MongoDB', 'AWS', 'Docker', 'Kubernetes', 'Go', 'Rust'];
 const EXPERIENCE_LEVELS = ['1–2 years', '3–5 years', '5–8 years', '8+ years'];
 const AVAILABILITY = ['Full-time', 'Part-time', 'Contract', 'Weekends only'];
+const SKILL_LEVELS = ['Junior', 'Mid', 'Senior'] as const;
+type SkillLevel = (typeof SKILL_LEVELS)[number];
+
+const COUNTRIES = ['United States', 'Canada', 'United Kingdom', 'Australia', 'Germany', 'France',
+  'Spain', 'Netherlands', 'Poland', 'Ukraine', 'India', 'Pakistan', 'Bangladesh', 'Philippines',
+  'Indonesia', 'Vietnam', 'Singapore', 'Japan', 'Brazil', 'Argentina', 'Mexico', 'Colombia',
+  'Egypt', 'Nigeria', 'South Africa', 'Kenya', 'Other'];
+const US_CITIES = ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia',
+  'San Antonio', 'San Diego', 'Dallas', 'San Jose', 'Austin', 'Jacksonville', 'San Francisco',
+  'Seattle', 'Denver', 'Boston', 'Miami', 'Atlanta', 'Portland', 'Las Vegas', 'Other'];
+
+function normalizePhone(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 10);
+  if (digits.length < 4) return digits;
+  if (digits.length < 7) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
 const CRON_SCHEDULES = [
   { label: 'Every 3 days', value: '3' },
   { label: 'Weekly', value: '7' },
@@ -28,9 +45,12 @@ interface FormData {
   full_name: string;
   email: string;
   phone: string;
+  city: string;
+  country: string;
   location: string;
   bio: string;
   skills: string[];
+  skill_levels: Record<string, SkillLevel>;
   experience_level: string;
   hourly_rate: string;
   availability: string;
@@ -39,8 +59,8 @@ interface FormData {
 }
 
 const INIT: FormData = {
-  full_name: '', email: '', phone: '', location: '', bio: '',
-  skills: [], experience_level: '', hourly_rate: '', availability: '',
+  full_name: '', email: '', phone: '', city: '', country: '', location: '', bio: '',
+  skills: [], skill_levels: {}, experience_level: '', hourly_rate: '', availability: '',
   cronSchedule: '7', portfolio_url: '',
 };
 
@@ -66,12 +86,16 @@ function OnboardingContent() {
       .then(d => {
         if (d.ok && d.record) {
           const r = d.record;
+          const loc = String(r.location ?? '');
+          const [maybeCity, ...rest] = loc.split(',').map(s => s.trim());
           setForm(prev => ({
             ...prev,
             full_name: String(r.full_name ?? ''),
             email: String(r.email ?? ''),
-            phone: String(r.phone ?? ''),
-            location: String(r.location ?? ''),
+            phone: normalizePhone(String(r.phone ?? '')),
+            city: String(r.city ?? maybeCity ?? ''),
+            country: String(r.country ?? rest.join(', ') ?? ''),
+            location: loc,
             bio: String(r.bio ?? ''),
           }));
         }
@@ -80,26 +104,36 @@ function OnboardingContent() {
       .finally(() => setLoading(false));
   }, [ref]);
 
-  function set(field: keyof FormData, value: string | string[]) {
+  function set<K extends keyof FormData>(field: K, value: FormData[K]) {
     setForm(prev => ({ ...prev, [field]: value }));
   }
 
   function toggleSkill(skill: string) {
-    setForm(prev => ({
-      ...prev,
-      skills: prev.skills.includes(skill)
-        ? prev.skills.filter(s => s !== skill)
-        : [...prev.skills, skill],
-    }));
+    setForm(prev => {
+      const has = prev.skills.includes(skill);
+      const skills = has ? prev.skills.filter(s => s !== skill) : [...prev.skills, skill];
+      const skill_levels = { ...prev.skill_levels };
+      if (has) delete skill_levels[skill];
+      else skill_levels[skill] = 'Mid';
+      return { ...prev, skills, skill_levels };
+    });
+  }
+
+  function setSkillLevel(skill: string, level: SkillLevel) {
+    setForm(prev => ({ ...prev, skill_levels: { ...prev.skill_levels, [skill]: level } }));
   }
 
   async function handleNext() {
     setError('');
     if (step === 1) {
       if (!form.full_name || !form.email) { setError('Name and email are required.'); return; }
+      if (!form.phone) { setError('Phone is required.'); return; }
+      if (!form.city || !form.country) { setError('City and country are required.'); return; }
     } else if (step === 2) {
       if (form.skills.length === 0) { setError('Select at least one skill.'); return; }
-      if (!form.experience_level) { setError('Select your experience level.'); return; }
+      if (!form.experience_level) { setError('Select your overall experience level.'); return; }
+      const missingLevel = form.skills.find(s => !form.skill_levels[s]);
+      if (missingLevel) { setError(`Set an experience level for ${missingLevel}.`); return; }
     } else if (step === 3) {
       if (!form.hourly_rate || !form.availability) { setError('Rate and availability are required.'); return; }
     }
@@ -110,7 +144,13 @@ function OnboardingContent() {
     setError('');
     setSubmitting(true);
     try {
-      const payload = { ...form, eventId, hourly_rate: Number(form.hourly_rate) };
+      const location = [form.city, form.country].filter(Boolean).join(', ');
+      const payload = {
+        ...form,
+        eventId,
+        location,
+        hourly_rate: Number(form.hourly_rate),
+      };
       await submitOnboarding(payload);
       sessionStorage.setItem('vlp_ref', eventId);
 
@@ -124,10 +164,18 @@ function OnboardingContent() {
       if (checkout.url) {
         window.location.href = checkout.url;
       } else {
-        setError('Could not create checkout session.');
+        setError('Could not create checkout session. Please try again or contact support.');
       }
-    } catch {
-      setError('Something went wrong. Please try again.');
+    } catch (e) {
+      const err = e as { status?: number; body?: { error?: string; message?: string } };
+      const detail = err?.body?.message || err?.body?.error;
+      if (err?.status === 400 && detail) {
+        setError(`Submission failed: ${detail}`);
+      } else if (err?.status) {
+        setError(`Submission failed (HTTP ${err.status}). Please try again.`);
+      } else {
+        setError('Network error. Please check your connection and try again.');
+      }
     }
     setSubmitting(false);
   }
@@ -168,15 +216,32 @@ function OnboardingContent() {
               </Field>
             </div>
             <div className={styles.row2}>
-              <Field label="Phone">
-                <input type="tel" className="vlp-input field-focus" placeholder="+1 (555) 000-0000"
-                  value={form.phone} onChange={e => set('phone', e.target.value)} />
+              <Field label="Phone *">
+                <input type="tel" className="vlp-input field-focus" placeholder="(555) 000-0000"
+                  value={form.phone}
+                  onChange={e => set('phone', e.target.value)}
+                  onBlur={e => set('phone', normalizePhone(e.target.value))} />
               </Field>
-              <Field label="Location">
-                <input className="vlp-input field-focus" placeholder="City, Country"
-                  value={form.location} onChange={e => set('location', e.target.value)} />
+              <Field label="Country *">
+                <select className="vlp-input field-focus" value={form.country}
+                  onChange={e => set('country', e.target.value)}>
+                  <option value="">Select country…</option>
+                  {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
               </Field>
             </div>
+            <Field label="City *">
+              {form.country === 'United States' ? (
+                <select className="vlp-input field-focus" value={form.city}
+                  onChange={e => set('city', e.target.value)}>
+                  <option value="">Select city…</option>
+                  {US_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              ) : (
+                <input className="vlp-input field-focus" placeholder="City"
+                  value={form.city} onChange={e => set('city', e.target.value)} />
+              )}
+            </Field>
             <Field label="Bio">
               <textarea className="vlp-input field-focus" rows={4} placeholder="Tell clients about yourself…"
                 value={form.bio} onChange={e => set('bio', e.target.value)} style={{ resize: 'vertical' }} />
@@ -204,6 +269,22 @@ function OnboardingContent() {
               ))}
             </div>
           </Field>
+          {form.skills.length > 0 && (
+            <Field label="Experience level per skill *">
+              <div className={styles.skillLevelList}>
+                {form.skills.map(s => (
+                  <div key={s} className={styles.skillLevelRow}>
+                    <span className={styles.skillLevelName}>{s}</span>
+                    <select className="vlp-input field-focus" style={{ maxWidth: '10rem' }}
+                      value={form.skill_levels[s] ?? ''}
+                      onChange={e => setSkillLevel(s, e.target.value as SkillLevel)}>
+                      {SKILL_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </Field>
+          )}
           <Field label="Experience Level *">
             <div className={styles.optionRow}>
               {EXPERIENCE_LEVELS.map(l => (
